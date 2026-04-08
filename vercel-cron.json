@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/ai/challenges",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/expire-subscriptions",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
