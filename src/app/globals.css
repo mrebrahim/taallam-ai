@@ -15,7 +15,6 @@ input, textarea { font-family: inherit; }
 /* ===== COMPONENT STYLES ===== */
 
 /* === from src/app/auth/login/page.tsx === */
-{`
         .auth-page {
           min-height: 100vh;
           display: flex;
@@ -159,10 +158,9 @@ input, textarea { font-family: inherit; }
           font-weight: 500;
           text-decoration: none;
         }
-      `}
+      
 
 /* === from src/app/challenges/page.tsx === */
-{`
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--color-background-tertiary); }
         .ch-page { max-width: 480px; margin: 0 auto; padding: 20px 16px 90px; font-family: var(--font-sans); }
@@ -202,10 +200,9 @@ input, textarea { font-family: inherit; }
         .nav-icon { font-size: 20px; }
         .nav-label { font-size: 10px; color: var(--color-text-tertiary); }
         .nav-active .nav-label { color: #7F77DD; font-weight: 600; }
-      `}
+      
 
 /* === from src/app/home/page.tsx === */
-{`
                 .roadmap-quick-card {
                   display: flex; align-items: center; gap: 12px;
                   background: var(--color-background-primary);
@@ -222,10 +219,9 @@ input, textarea { font-family: inherit; }
                 }
                 .roadmap-quick-label { flex: 1; font-size: 15px; font-weight: 500; }
                 .roadmap-quick-arrow { color: var(--color-text-tertiary); font-size: 18px; }
-              `}
+              
 
 /* === from src/app/home/page.tsx === */
-{`
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--color-background-tertiary); }
         .home-page { max-width: 480px; margin: 0 auto; padding: 16px 16px 90px; font-family: var(--font-sans); }
@@ -259,10 +255,9 @@ input, textarea { font-family: inherit; }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; padding: 4px 0; }
         .nav-icon { font-size: 20px; }
         .nav-label { font-size: 10px; color: var(--color-text-tertiary); }
-      `}
+      
 
 /* === from src/app/leaderboard/page.tsx === */
-{`
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--color-background-tertiary); }
         .lb-page { max-width: 480px; margin: 0 auto; padding: 20px 16px 90px; font-family: var(--font-sans); }
@@ -297,10 +292,9 @@ input, textarea { font-family: inherit; }
         .nav-icon { font-size: 20px; }
         .nav-label { font-size: 10px; color: var(--color-text-tertiary); }
         .nav-active .nav-label { color: #7F77DD; font-weight: 600; }
-      `}
+      
 
 /* === from src/app/learn/page.tsx === */
-{`
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--color-background-tertiary); }
         .learn-page { max-width: 480px; margin: 0 auto; padding: 20px 16px 90px; font-family: var(--font-sans); }
@@ -330,10 +324,9 @@ input, textarea { font-family: inherit; }
         .nav-icon { font-size: 20px; }
         .nav-label { font-size: 10px; color: var(--color-text-tertiary); }
         .nav-active .nav-label { color: #7F77DD; font-weight: 600; }
-      `}
+      
 
 /* === from src/app/profile/page.tsx === */
-{`
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--color-background-tertiary); }
         .profile-page { max-width: 480px; margin: 0 auto; padding: 20px 16px 90px; font-family: var(--font-sans); }
@@ -372,10 +365,9 @@ input, textarea { font-family: inherit; }
         .nav-icon { font-size: 20px; }
         .nav-label { font-size: 10px; color: var(--color-text-tertiary); }
         .nav-active .nav-label { color: #7F77DD; font-weight: 600; }
-      `}
+      
 
 /* === from src/app/upgrade/page.tsx === */
-{`
         .up-page { min-height: 100vh; padding: 40px 20px; background: var(--color-background-tertiary); font-family: var(--font-sans); }
         .up-header { text-align: center; margin-bottom: 32px; }
         .up-header h1 { font-size: 28px; font-weight: 600; color: var(--color-text-primary); margin: 0 0 8px; }
@@ -399,20 +391,18 @@ input, textarea { font-family: inherit; }
         .up-alert-success { background: #EAF3DE; color: #27500A; }
         .up-alert-warn { background: #FAEEDA; color: #633806; }
         .up-loading { min-height: 100vh; display: flex; align-items: center; justify-content: center; color: var(--color-text-secondary); }
-      `}
+      
 
 /* === from src/components/gamification/index.tsx === */
-{`
         .xp-bar { width: 100%; }
         .xp-bar-labels { display: flex; justify-content: space-between; margin-bottom: 6px; }
         .xp-label { font-size: ${size === 'sm' ? '11px' : '13px'}; font-weight: 500; color: var(--color-text-primary); }
         .xp-label-next { font-size: ${size === 'sm' ? '10px' : '12px'}; color: var(--color-text-tertiary); }
         .xp-track { height: ${size === 'sm' ? '6px' : '8px'}; background: var(--color-background-secondary); border-radius: 99px; overflow: hidden; }
         .xp-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
-      `}
+      
 
 /* === from src/components/gamification/index.tsx === */
-{`
         .streak-pill {
           display: inline-flex; align-items: center; gap: 4px;
           background: #FAEEDA; border-radius: 99px;
@@ -420,10 +410,9 @@ input, textarea { font-family: inherit; }
         }
         .streak-fire { font-size: 16px; }
         .streak-count { font-size: 15px; font-weight: 700; color: #633806; }
-      `}
+      
 
 /* === from src/components/gamification/index.tsx === */
-{`
         .coin-pill {
           display: inline-flex; align-items: center; gap: 4px;
           background: #FAEEDA; border-radius: 99px;
@@ -431,22 +420,20 @@ input, textarea { font-family: inherit; }
         }
         .coin-icon { font-size: 15px; }
         .coin-count { font-size: 14px; font-weight: 700; color: #633806; }
-      `}
+      
 
 /* === from src/components/gamification/index.tsx === */
-{`
         .level-badge {
           width: 36px; height: 36px; border-radius: 10px;
           display: flex; align-items: center; justify-content: center;
         }
         .level-num { color: #fff; font-size: 16px; font-weight: 700; }
-      `}
+      
 
 /* === from src/components/gamification/index.tsx === */
-{`
         .stats-row { display: flex; align-items: center; gap: 0; }
         .stat-item { flex: 1; text-align: center; padding: 12px 8px; }
         .stat-value { display: block; font-size: 20px; font-weight: 700; color: var(--color-text-primary); }
         .stat-label { display: block; font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
         .stat-divider { width: 1px; height: 36px; background: var(--color-border-tertiary); }
-      `}
+      
