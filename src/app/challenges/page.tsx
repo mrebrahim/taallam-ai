@@ -156,48 +156,6 @@ export default function ChallengesPage() {
           </Link>
         ))}
       </nav>
-
-      <style jsx global>{`
-        * { box-sizing: border-box; }
-        body { margin: 0; background: var(--color-background-tertiary); }
-        .ch-page { max-width: 480px; margin: 0 auto; padding: 20px 16px 90px; font-family: var(--font-sans); }
-        .ch-loading { min-height: 200px; display: flex; align-items: center; justify-content: center; color: var(--color-text-secondary); font-family: var(--font-sans); }
-        .ch-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-        .ch-header h1 { margin: 0 0 2px; font-size: 24px; font-weight: 700; color: var(--color-text-primary); }
-        .ch-header p { margin: 0; font-size: 13px; color: var(--color-text-secondary); }
-        .ch-completed-badge { width: 52px; height: 52px; border-radius: 14px; background: #EEEDFE; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #534AB7; }
-        .ch-week-bar { height: 6px; background: var(--color-background-secondary); border-radius: 99px; margin-bottom: 24px; overflow: hidden; }
-        .ch-week-fill { height: 100%; background: #7F77DD; border-radius: 99px; transition: width 0.6s ease; }
-        .ch-list { display: flex; flex-direction: column; gap: 10px; }
-        .ch-card { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--color-background-primary); border: 1px solid var(--color-border-tertiary); border-radius: 16px; transition: opacity 0.2s; }
-        .ch-card-done { opacity: 0.65; }
-        .ch-card-expired { opacity: 0.45; }
-        .ch-card-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
-        .ch-card-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-        .ch-card-top { display: flex; align-items: center; gap: 6px; }
-        .ch-card-title { font-size: 14px; font-weight: 600; color: var(--color-text-primary); }
-        .ch-ai-badge { font-size: 10px; background: var(--color-background-secondary); padding: 1px 6px; border-radius: 99px; color: var(--color-text-tertiary); }
-        .ch-card-meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-tertiary); }
-        .ch-type { font-weight: 500; }
-        .ch-dot { opacity: 0.4; }
-        .ch-rewards { display: flex; gap: 8px; margin-top: 2px; }
-        .ch-reward { font-size: 11px; font-weight: 600; color: #7F77DD; background: #EEEDFE; padding: 2px 7px; border-radius: 99px; }
-        .ch-score { font-size: 11px; color: var(--color-text-tertiary); }
-        .ch-card-action { flex-shrink: 0; }
-        .ch-start-btn { padding: 8px 14px; border: none; border-radius: 10px; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font-sans); transition: opacity 0.15s; }
-        .ch-start-btn:hover { opacity: 0.88; }
-        .ch-done-check { width: 36px; height: 36px; border-radius: 50%; background: #EAF3DE; display: flex; align-items: center; justify-content: center; color: #27500A; font-size: 18px; font-weight: 700; }
-        .ch-expired-text { font-size: 11px; color: var(--color-text-tertiary); }
-        .ch-empty { text-align: center; padding: 60px 20px; }
-        .ch-empty-icon { font-size: 48px; margin-bottom: 12px; }
-        .ch-empty p { margin: 0 0 6px; font-size: 16px; font-weight: 600; color: var(--color-text-primary); }
-        .ch-empty-sub { font-size: 13px; color: var(--color-text-secondary); }
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--color-background-primary); border-top: 1px solid var(--color-border-tertiary); display: flex; padding: 8px 0 12px; z-index: 100; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; padding: 4px 0; }
-        .nav-icon { font-size: 20px; }
-        .nav-label { font-size: 10px; color: var(--color-text-tertiary); }
-        .nav-active .nav-label { color: #7F77DD; font-weight: 600; }
-      `}</style>
     </div>
   )
 }

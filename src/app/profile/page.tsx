@@ -143,47 +143,6 @@ export default function ProfilePage() {
           </Link>
         ))}
       </nav>
-
-      <style jsx global>{`
-        * { box-sizing: border-box; }
-        body { margin: 0; background: var(--color-background-tertiary); }
-        .profile-page { max-width: 480px; margin: 0 auto; padding: 20px 16px 90px; font-family: var(--font-sans); }
-        .profile-loading { min-height: 100vh; display: flex; align-items: center; justify-content: center; color: var(--color-text-secondary); font-family: var(--font-sans); }
-        .profile-hero { text-align: center; padding: 24px 16px 20px; }
-        .profile-avatar { width: 72px; height: 72px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; color: #fff; margin: 0 auto 12px; }
-        .profile-hero h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; color: var(--color-text-primary); }
-        .profile-username { margin: 0 0 10px; font-size: 13px; color: var(--color-text-tertiary); }
-        .profile-plan-chip { display: inline-block; padding: 4px 12px; border-radius: 99px; font-size: 13px; font-weight: 600; }
-        .profile-card { background: var(--color-background-primary); border: 1px solid var(--color-border-tertiary); border-radius: 18px; margin-bottom: 12px; overflow: hidden; }
-        .profile-card-pad { padding: 18px; }
-        .profile-section-title { font-size: 15px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 14px; }
-        .profile-levels { display: flex; gap: 6px; margin-top: 12px; justify-content: center; }
-        .profile-level-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--color-background-secondary); border: 2px solid var(--color-border-secondary); transition: background 0.3s; }
-        .profile-level-dot.reached { border-color: transparent; }
-        .profile-level-labels { display: flex; justify-content: space-between; margin-top: 6px; }
-        .profile-level-name { font-size: 9px; color: var(--color-text-tertiary); text-align: center; flex: 1; }
-        .profile-level-name.current { font-weight: 700; }
-        .profile-streak-row { display: flex; gap: 16px; }
-        .profile-streak-item { flex: 1; text-align: center; padding: 12px; background: var(--color-background-secondary); border-radius: 12px; }
-        .streak-big { display: block; font-size: 22px; font-weight: 700; color: var(--color-text-primary); margin-bottom: 4px; }
-        .streak-lbl { font-size: 11px; color: var(--color-text-tertiary); }
-        .badges-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .badge-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .badge-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--color-background-secondary); display: flex; align-items: center; justify-content: center; font-size: 22px; }
-        .badge-name { font-size: 10px; color: var(--color-text-secondary); text-align: center; line-height: 1.3; }
-        .profile-empty { font-size: 13px; color: var(--color-text-tertiary); text-align: center; margin: 4px 0; }
-        .profile-sub-row { display: flex; align-items: center; justify-content: space-between; }
-        .profile-sub-row strong { font-size: 16px; }
-        .profile-sub-exp { margin: 4px 0 0; font-size: 12px; color: var(--color-text-tertiary); }
-        .profile-upgrade-btn { background: #7F77DD; color: #fff; border: none; border-radius: 10px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; }
-        .profile-signout { display: block; width: 100%; margin-bottom: 12px; padding: 13px; background: none; border: 1px solid var(--color-border-secondary); border-radius: 14px; color: var(--color-text-secondary); font-size: 14px; cursor: pointer; }
-        .profile-signout:hover { background: var(--color-background-secondary); }
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--color-background-primary); border-top: 1px solid var(--color-border-tertiary); display: flex; padding: 8px 0 12px; z-index: 100; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; padding: 4px 0; }
-        .nav-icon { font-size: 20px; }
-        .nav-label { font-size: 10px; color: var(--color-text-tertiary); }
-        .nav-active .nav-label { color: #7F77DD; font-weight: 600; }
-      `}</style>
     </div>
   )
 }

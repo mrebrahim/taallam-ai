@@ -146,43 +146,6 @@ export default function LeaderboardPage() {
           </Link>
         ))}
       </nav>
-
-      <style jsx global>{`
-        * { box-sizing: border-box; }
-        body { margin: 0; background: var(--color-background-tertiary); }
-        .lb-page { max-width: 480px; margin: 0 auto; padding: 20px 16px 90px; font-family: var(--font-sans); }
-        .lb-loading, .lb-fetching { min-height: 200px; display: flex; align-items: center; justify-content: center; color: var(--color-text-secondary); font-family: var(--font-sans); }
-        .lb-header { margin-bottom: 20px; display: flex; align-items: baseline; justify-content: space-between; }
-        .lb-header h1 { margin: 0; font-size: 24px; font-weight: 700; color: var(--color-text-primary); }
-        .lb-my-rank { margin: 0; font-size: 14px; font-weight: 600; color: #7F77DD; }
-        .lb-tabs { display: flex; background: var(--color-background-secondary); border-radius: 12px; padding: 4px; margin-bottom: 20px; gap: 4px; }
-        .lb-tab { flex: 1; padding: 8px 4px; border: none; background: none; font-size: 13px; color: var(--color-text-secondary); border-radius: 8px; cursor: pointer; font-family: var(--font-sans); transition: all 0.15s; }
-        .lb-tab-active { background: var(--color-background-primary); color: var(--color-text-primary); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-        .lb-podium { display: flex; align-items: flex-end; justify-content: center; gap: 8px; margin-bottom: 24px; padding: 16px; background: var(--color-background-primary); border-radius: 20px; border: 1px solid var(--color-border-tertiary); }
-        .podium-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .podium-medal { font-size: 22px; }
-        .podium-avatar { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff; }
-        .podium-name { font-size: 11px; font-weight: 600; color: var(--color-text-primary); text-align: center; }
-        .podium-xp { font-size: 10px; color: var(--color-text-tertiary); }
-        .podium-bar { width: 100%; border-radius: 6px 6px 0 0; }
-        .lb-list { display: flex; flex-direction: column; gap: 6px; }
-        .lb-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--color-background-primary); border: 1px solid var(--color-border-tertiary); border-radius: 14px; }
-        .lb-row-me { border-color: #7F77DD; background: #EEEDFE; }
-        .lb-rank { font-size: 14px; font-weight: 700; color: var(--color-text-tertiary); min-width: 32px; text-align: center; }
-        .lb-avatar { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #fff; flex-shrink: 0; }
-        .lb-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-        .lb-username { font-size: 14px; font-weight: 600; color: var(--color-text-primary); }
-        .lb-you-badge { font-size: 10px; background: #7F77DD; color: #fff; padding: 1px 6px; border-radius: 99px; margin-right: 4px; }
-        .lb-level { font-size: 11px; color: var(--color-text-tertiary); }
-        .lb-xp { font-size: 14px; font-weight: 700; color: var(--color-text-primary); }
-        .lb-xp small { font-size: 10px; color: var(--color-text-tertiary); font-weight: 400; }
-        .lb-empty { text-align: center; padding: 40px 20px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.8; }
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--color-background-primary); border-top: 1px solid var(--color-border-tertiary); display: flex; padding: 8px 0 12px; z-index: 100; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; padding: 4px 0; }
-        .nav-icon { font-size: 20px; }
-        .nav-label { font-size: 10px; color: var(--color-text-tertiary); }
-        .nav-active .nav-label { color: #7F77DD; font-weight: 600; }
-      `}</style>
     </div>
   )
 }

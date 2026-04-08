@@ -161,38 +161,6 @@ export default function LearnPage() {
           </Link>
         ))}
       </nav>
-
-      <style jsx global>{`
-        * { box-sizing: border-box; }
-        body { margin: 0; background: var(--color-background-tertiary); }
-        .learn-page { max-width: 480px; margin: 0 auto; padding: 20px 16px 90px; font-family: var(--font-sans); }
-        .learn-loading { min-height: 100vh; display: flex; align-items: center; justify-content: center; color: var(--color-text-secondary); font-family: var(--font-sans); }
-        .learn-header { margin-bottom: 24px; }
-        .learn-header h1 { margin: 0 0 4px; font-size: 24px; font-weight: 700; color: var(--color-text-primary); }
-        .learn-header p { margin: 0; font-size: 14px; color: var(--color-text-secondary); }
-        .learn-roadmaps { display: flex; flex-direction: column; gap: 16px; }
-        .roadmap-card { background: var(--color-background-primary); border: 1px solid var(--color-border-tertiary); border-radius: 20px; overflow: hidden; }
-        .roadmap-cover { height: 120px; display: flex; align-items: center; justify-content: center; position: relative; }
-        .roadmap-emoji { font-size: 48px; }
-        .roadmap-cert-badge { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.4); color: #fff; font-size: 12px; padding: 3px 8px; border-radius: 99px; }
-        .roadmap-body { padding: 20px; }
-        .roadmap-body h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--color-text-primary); }
-        .roadmap-desc { margin: 0 0 12px; font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; }
-        .roadmap-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-        .roadmap-stats span { font-size: 12px; color: var(--color-text-tertiary); }
-        .roadmap-progress { margin-bottom: 14px; }
-        .roadmap-progress-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--color-text-tertiary); margin-bottom: 6px; }
-        .roadmap-progress-track { height: 7px; background: var(--color-background-secondary); border-radius: 99px; overflow: hidden; }
-        .roadmap-progress-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
-        .roadmap-btn { display: block; width: 100%; padding: 13px; border-radius: 12px; border: none; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; transition: opacity 0.15s; }
-        .roadmap-btn:hover { opacity: 0.88; }
-        .roadmap-btn-outline { background: transparent !important; border: 2px solid; color: inherit; }
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--color-background-primary); border-top: 1px solid var(--color-border-tertiary); display: flex; padding: 8px 0 12px; z-index: 100; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; padding: 4px 0; }
-        .nav-icon { font-size: 20px; }
-        .nav-label { font-size: 10px; color: var(--color-text-tertiary); }
-        .nav-active .nav-label { color: #7F77DD; font-weight: 600; }
-      `}</style>
     </div>
   )
 }
