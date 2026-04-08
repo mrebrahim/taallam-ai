@@ -211,7 +211,7 @@ input, textarea { font-family: inherit; }
                   text-decoration: none; color: var(--color-text-primary);
                   transition: border-color 0.15s;
                 }
-                .roadmap-quick-card:hover { border-color: ${meta.color}; }
+                .roadmap-quick-card:hover { border-color: var(--color-border-primary); }
                 .roadmap-quick-emoji {
                   width: 40px; height: 40px; border-radius: 10px;
                   display: flex; align-items: center; justify-content: center;
@@ -396,9 +396,9 @@ input, textarea { font-family: inherit; }
 /* === from src/components/gamification/index.tsx === */
         .xp-bar { width: 100%; }
         .xp-bar-labels { display: flex; justify-content: space-between; margin-bottom: 6px; }
-        .xp-label { font-size: ${size === 'sm' ? '11px' : '13px'}; font-weight: 500; color: var(--color-text-primary); }
-        .xp-label-next { font-size: ${size === 'sm' ? '10px' : '12px'}; color: var(--color-text-tertiary); }
-        .xp-track { height: ${size === 'sm' ? '6px' : '8px'}; background: var(--color-background-secondary); border-radius: 99px; overflow: hidden; }
+        .xp-label { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+        .xp-label-next { font-size: 12px; color: var(--color-text-tertiary); }
+        .xp-track { height: 8px; background: var(--color-background-secondary); border-radius: 99px; overflow: hidden; }
         .xp-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
       
 
