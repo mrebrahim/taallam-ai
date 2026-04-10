@@ -18,13 +18,28 @@ const MOTIVATIONAL = [
   'استمر — الـ streak بيحسبك! 🎯',
 ]
 
+const NAV = [
+  { href:'/home',        icon:'🏠', label:'الرئيسية', active:true  },
+  { href:'/learn',       icon:'📚', label:'التعلم'                 },
+  { href:'/challenges',  icon:'⚔️',  label:'التحديات'              },
+  { href:'/leaderboard', icon:'🏆', label:'الترتيب'                },
+  { href:'/profile',     icon:'👤', label:'ملفي'                    },
+]
+
 export default function HomePage() {
-  const { user, loading, signOut } = useUser()
+  const { user, loading } = useUser()
   const [missions, setMissions] = useState<any[]>([])
   const [progress, setProgress] = useState<Record<string, any>>({})
   const [roadmaps, setRoadmaps] = useState<any[]>([])
   const [quote] = useState(() => MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)])
   const supabase = createClient()
+
+  // Redirect if no user after loading completes
+  useEffect(() => {
+    if (!loading && !user) {
+      window.location.replace('/auth/login')
+    }
+  }, [loading, user])
 
   useEffect(() => {
     if (!user) return
@@ -43,25 +58,44 @@ export default function HomePage() {
       })
   }, [user])
 
-  // Redirect to login if not authenticated
-  if (!loading && !user) {
-    if (typeof window !== 'undefined') window.location.replace('/auth/login')
-    return null
+  // Show skeleton while loading — no more spinner stuck forever
+  if (loading || !user) {
+    return (
+      <div dir="rtl" style={{ maxWidth:480, margin:'0 auto', padding:'16px 16px 90px', fontFamily:'var(--font-sans)', background:'var(--color-background-tertiary)', minHeight:'100vh' }}>
+        {/* Skeleton top bar */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+          <div style={{ display:'flex', gap:8 }}>
+            <div style={{ width:80, height:34, borderRadius:99, background:'#eee' }} />
+            <div style={{ width:80, height:34, borderRadius:99, background:'#eee' }} />
+          </div>
+          <div style={{ width:42, height:42, borderRadius:14, background:'#eee' }} />
+        </div>
+        {/* Skeleton greeting */}
+        <div style={{ width:200, height:20, borderRadius:8, background:'#eee', marginBottom:8 }} />
+        <div style={{ width:280, height:28, borderRadius:8, background:'#eee', marginBottom:20 }} />
+        {/* Skeleton XP card */}
+        <div style={{ background:'#fff', borderRadius:20, padding:18, marginBottom:16, height:80, background:'#f5f5f5' }} />
+        {/* Skeleton cards */}
+        {[1,2,3].map(i => (
+          <div key={i} style={{ background:'#f5f5f5', borderRadius:16, padding:14, marginBottom:10, height:70 }} />
+        ))}
+        {/* Bottom nav */}
+        <nav style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'var(--color-background-primary)', borderTop:'2px solid var(--color-border-tertiary)', display:'flex', padding:'8px 0 16px', zIndex:100 }}>
+          {NAV.map(n => (
+            <Link key={n.href} href={n.href} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, textDecoration:'none', padding:'4px 0' }}>
+              <span style={{ fontSize:22 }}>{n.icon}</span>
+              <span style={{ fontSize:10, color: n.active ? '#1CB0F6' : 'var(--color-text-tertiary)', fontWeight: n.active ? 700 : 400 }}>{n.label}</span>
+            </Link>
+          ))}
+        </nav>
+      </div>
+    )
   }
 
-  if (loading) return (
-    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'var(--font-sans)', gap:12 }}>
-      <span style={{ fontSize:48 }}>🦉</span>
-      <p style={{ color:'var(--color-text-secondary)', margin:0 }}>جاري التحميل...</p>
-    </div>
-  )
-
-  const currentUser = user!
-
-  const levelInfo = getLevelInfo(currentUser.xp_total)
-  const nextLevel = LEVELS.find(l => l.level === currentUser.current_level + 1)
+  const levelInfo = getLevelInfo(user.xp_total)
+  const nextLevel = LEVELS.find(l => l.level === user.current_level + 1)
   const xpProgress = nextLevel
-    ? Math.min(100, ((currentUser.xp_total - levelInfo.xp_min) / (nextLevel.xp_min - levelInfo.xp_min)) * 100)
+    ? Math.min(100, ((user.xp_total - levelInfo.xp_min) / (nextLevel.xp_min - levelInfo.xp_min)) * 100)
     : 100
   const completedMissions = missions.filter(m => m.completed).length
   const enrolledRoadmaps = roadmaps.filter(r => progress[r.id])
@@ -73,20 +107,20 @@ export default function HomePage() {
       <header style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
         <div style={{ display:'flex', gap:8 }}>
           <Link href="/streak" style={{ display:'flex', alignItems:'center', gap:6, background:'#FFF5D3', borderRadius:99, padding:'6px 14px', fontWeight:700, fontSize:15, color:'#A56644', textDecoration:'none' }}>
-            🔥 {currentUser.streak_current}
+            🔥 {user.streak_current}
           </Link>
           <div style={{ display:'flex', alignItems:'center', gap:6, background:'#DDF4FF', borderRadius:99, padding:'6px 14px', fontWeight:700, fontSize:15, color:'#1453A3' }}>
-            💎 {currentUser.coins_balance.toLocaleString()}
+            💎 {user.coins_balance.toLocaleString()}
           </div>
         </div>
         <Link href="/profile" style={{ width:42, height:42, borderRadius:14, background:levelInfo.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:700, color:'#fff', textDecoration:'none' }}>
-          {(currentUser.full_name?.[0] || currentUser.username[0]).toUpperCase()}
+          {(user.full_name?.[0] || user.username[0]).toUpperCase()}
         </Link>
       </header>
 
       {/* GREETING */}
       <div style={{ marginBottom:20 }}>
-        <p style={{ margin:'0 0 4px', fontSize:14, color:'var(--color-text-secondary)' }}>أهلاً، {currentUser.full_name?.split(' ')[0] || currentUser.username}!</p>
+        <p style={{ margin:'0 0 4px', fontSize:14, color:'var(--color-text-secondary)' }}>أهلاً، {user.full_name?.split(' ')[0] || user.username}!</p>
         <h1 style={{ margin:0, fontSize:22, fontWeight:800, color:'var(--color-text-primary)', lineHeight:1.3 }}>{quote}</h1>
       </div>
 
@@ -94,13 +128,13 @@ export default function HomePage() {
       <div style={{ background:'var(--color-background-primary)', borderRadius:20, padding:18, marginBottom:16, border:'1px solid var(--color-border-tertiary)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
           <div style={{ width:44, height:44, borderRadius:14, background:levelInfo.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:800, color:'#fff', flexShrink:0 }}>
-            {currentUser.current_level}
+            {user.current_level}
           </div>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:15, fontWeight:700, color:'var(--color-text-primary)', marginBottom:2 }}>{levelInfo.name_ar}</div>
-            {nextLevel && <div style={{ fontSize:12, color:'var(--color-text-tertiary)' }}>{nextLevel.xp_min - currentUser.xp_total} XP للمستوى التالي</div>}
+            {nextLevel && <div style={{ fontSize:12, color:'var(--color-text-tertiary)' }}>{nextLevel.xp_min - user.xp_total} XP للمستوى التالي</div>}
           </div>
-          <div style={{ fontSize:14, fontWeight:700, color:levelInfo.color }}>{currentUser.xp_total.toLocaleString()} XP</div>
+          <div style={{ fontSize:14, fontWeight:700, color:levelInfo.color }}>{user.xp_total.toLocaleString()} XP</div>
         </div>
         <div style={{ height:10, background:'var(--color-background-secondary)', borderRadius:99, overflow:'hidden' }}>
           <div style={{ height:'100%', borderRadius:99, background:levelInfo.color, width:`${xpProgress}%`, transition:'width 0.8s ease' }} />
@@ -179,9 +213,7 @@ export default function HomePage() {
                   <div style={{ fontSize:15, fontWeight:700, color:'var(--color-text-primary)', marginBottom:2 }}>{meta.label}</div>
                   <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>{meta.desc}</div>
                 </div>
-                {isEnrolled && (
-                  <span style={{ background:meta.bg, color:meta.color, borderRadius:99, padding:'3px 10px', fontSize:11, fontWeight:700, flexShrink:0 }}>مسجّل</span>
-                )}
+                {isEnrolled && <span style={{ background:meta.bg, color:meta.color, borderRadius:99, padding:'3px 10px', fontSize:11, fontWeight:700, flexShrink:0 }}>مسجّل</span>}
               </Link>
             )
           })}
@@ -189,7 +221,7 @@ export default function HomePage() {
       </div>
 
       {/* UPGRADE BANNER */}
-      {currentUser.subscription_plan === 'free' && (
+      {user.subscription_plan === 'free' && (
         <Link href="/upgrade" style={{ display:'flex', alignItems:'center', gap:14, background:'linear-gradient(135deg, #1CB0F6, #1899D6)', borderRadius:20, padding:'18px 20px', marginBottom:20, textDecoration:'none' }}>
           <span style={{ fontSize:28 }}>👑</span>
           <div style={{ flex:1 }}>
@@ -202,20 +234,13 @@ export default function HomePage() {
 
       {/* BOTTOM NAV */}
       <nav style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'var(--color-background-primary)', borderTop:'2px solid var(--color-border-tertiary)', display:'flex', padding:'8px 0 16px', zIndex:100 }}>
-        {[
-          { href:'/home',        icon:'🏠', label:'الرئيسية', active:true  },
-          { href:'/learn',       icon:'📚', label:'التعلم'                 },
-          { href:'/challenges',  icon:'⚔️',  label:'التحديات'             },
-          { href:'/leaderboard', icon:'🏆', label:'الترتيب'               },
-          { href:'/profile',     icon:'👤', label:'ملفي'                   },
-        ].map(n => (
+        {NAV.map(n => (
           <Link key={n.href} href={n.href} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, textDecoration:'none', padding:'4px 0' }}>
             <span style={{ fontSize:22 }}>{n.icon}</span>
             <span style={{ fontSize:10, color: n.active ? '#1CB0F6' : 'var(--color-text-tertiary)', fontWeight: n.active ? 700 : 400 }}>{n.label}</span>
           </Link>
         ))}
       </nav>
-
     </div>
   )
 }
