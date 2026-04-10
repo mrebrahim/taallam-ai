@@ -21,15 +21,25 @@ export function useUser() {
       }
     }
 
+    // Hard timeout — NEVER stay loading more than 3 seconds
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        console.log('[useUser] timeout — forcing loading=false')
+        setLoading(false)
+      }
+    }, 3000)
+
     const init = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (cancelled) return
+        clearTimeout(timeout)
         if (!session?.user) { setLoading(false); return }
         setAuthUser(session.user)
         await fetchProfile(session.user.id)
         if (!cancelled) setLoading(false)
       } catch {
+        clearTimeout(timeout)
         if (!cancelled) setLoading(false)
       }
     }
@@ -48,7 +58,7 @@ export function useUser() {
       }
     )
 
-    return () => { cancelled = true; subscription.unsubscribe() }
+    return () => { cancelled = true; clearTimeout(timeout); subscription.unsubscribe() }
   }, [])
 
   const signOut = async () => {
