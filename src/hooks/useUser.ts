@@ -15,7 +15,7 @@ export function useUser() {
     // Safety net — never stay loading more than 5 seconds
     const timeout = setTimeout(() => {
       if (!cancelled) setLoading(false)
-    }, 5000)
+    }, 3000)
 
     const fetchProfile = async (userId: string) => {
       try {

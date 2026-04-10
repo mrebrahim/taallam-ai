@@ -43,13 +43,18 @@ export default function HomePage() {
       })
   }, [user])
 
+  // If done loading and no user → redirect to login
+  if (!loading && !user) {
+    if (typeof window !== 'undefined') window.location.replace('/auth/login')
+    return null
+  }
+
   if (loading) return (
     <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'var(--font-sans)', gap:12 }}>
       <span style={{ fontSize:48 }}>🦉</span>
       <p style={{ color:'var(--color-text-secondary)', margin:0 }}>جاري التحميل...</p>
     </div>
   )
-  if (!user) { if (typeof window !== 'undefined') window.location.href = '/auth/login'; return null }
 
   const levelInfo = getLevelInfo(user.xp_total)
   const nextLevel = LEVELS.find(l => l.level === user.current_level + 1)
