@@ -83,19 +83,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
       return
     }
 
-    // Set server-side cookie via API route
-    try {
-      await fetch('/api/auth/set-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        }),
-      })
-    } catch {}
-
-    // Hard reload to pick up cookie
+    // Navigate to home — session is now in localStorage
     window.location.href = '/home'
   }
 

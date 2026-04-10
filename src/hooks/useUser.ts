@@ -11,48 +11,46 @@ export function useUser() {
   useEffect(() => {
     const supabase = createClient()
     let cancelled = false
+    let resolved = false
 
-    const fetchProfile = async (userId: string) => {
+    const resolve = (au: any, u: User | null) => {
+      if (cancelled || resolved) return
+      resolved = true
+      setAuthUser(au)
+      setUser(u)
+      setLoading(false)
+    }
+
+    const fetchProfile = async (userId: string): Promise<User | null> => {
       try {
         const { data } = await supabase.from('users').select('*').eq('id', userId).single()
-        if (!cancelled) setUser(data ?? null)
-      } catch { if (!cancelled) setUser(null) }
+        return data ?? null
+      } catch { return null }
     }
 
-    // Hard timeout — max 4 seconds
-    const timeout = setTimeout(() => {
-      if (!cancelled) setLoading(false)
-    }, 4000)
+    // Hard timeout: 5 seconds max
+    const timeout = setTimeout(() => resolve(null, null), 5000)
 
-    const init = async () => {
-      try {
-        // Try getSession first (fast, from localStorage/cookie)
-        const { data: { session } } = await supabase.auth.getSession()
-        if (cancelled) return
-        clearTimeout(timeout)
-        if (!session?.user) { setLoading(false); return }
-        setAuthUser(session.user)
-        await fetchProfile(session.user.id)
-        if (!cancelled) setLoading(false)
-      } catch {
-        clearTimeout(timeout)
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    init()
-
+    // Primary: onAuthStateChange fires reliably after hydration
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        clearTimeout(timeout)
         if (cancelled) return
-        if (event === 'SIGNED_OUT' || !session) {
-          setAuthUser(null); setUser(null); setLoading(false); return
-        }
-        setAuthUser(session.user)
-        if (session.user) await fetchProfile(session.user.id)
-        if (!cancelled) setLoading(false)
+        if (!session?.user) { resolve(null, null); return }
+        const profile = await fetchProfile(session.user.id)
+        resolve(session.user, profile)
       }
     )
+
+    // Secondary: also check getSession() to cover cases where
+    // onAuthStateChange doesn't fire immediately
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelled || resolved) return
+      if (!session?.user) return // wait for onAuthStateChange
+      const profile = await fetchProfile(session.user.id)
+      clearTimeout(timeout)
+      resolve(session.user, profile)
+    })
 
     return () => { cancelled = true; clearTimeout(timeout); subscription.unsubscribe() }
   }, [])
