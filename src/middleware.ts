@@ -10,22 +10,23 @@ export async function middleware(request: NextRequest) {
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
       getAll() { return request.cookies.getAll() },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
         supabaseResponse = NextResponse.next({ request })
         cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
+          supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
         )
       },
     },
   })
 
-  // Refresh session — this is the key step that fixes infinite loading
+  // Refresh session
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Redirect to login if accessing protected pages without session
+  // Protect routes
+  const pathname = request.nextUrl.pathname
   const protectedPaths = ['/home', '/learn', '/profile', '/challenges', '/leaderboard', '/streak', '/upgrade']
-  const isProtected = protectedPaths.some(p => request.nextUrl.pathname.startsWith(p))
+  const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone()
@@ -37,7 +38,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|manifest|api|auth).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|manifest|api|auth).*)',],
 }

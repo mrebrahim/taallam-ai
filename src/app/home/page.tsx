@@ -56,10 +56,13 @@ export default function HomePage() {
     </div>
   )
 
-  const levelInfo = getLevelInfo(user.xp_total)
-  const nextLevel = LEVELS.find(l => l.level === user.current_level + 1)
+  // At this point user is guaranteed non-null (redirected above if null)
+  const currentUser = user!
+
+  const levelInfo = getLevelInfo(currentUser.xp_total)
+  const nextLevel = LEVELS.find(l => l.level === currentUser.current_level + 1)
   const xpProgress = nextLevel
-    ? Math.min(100, ((user.xp_total - levelInfo.xp_min) / (nextLevel.xp_min - levelInfo.xp_min)) * 100)
+    ? Math.min(100, ((currentUser.xp_total - levelInfo.xp_min) / (nextLevel.xp_min - levelInfo.xp_min)) * 100)
     : 100
   const completedMissions = missions.filter(m => m.completed).length
   const enrolledRoadmaps = roadmaps.filter(r => progress[r.id])
@@ -71,20 +74,20 @@ export default function HomePage() {
       <header style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
         <div style={{ display:'flex', gap:8 }}>
           <Link href="/streak" style={{ display:'flex', alignItems:'center', gap:6, background:'#FFF5D3', borderRadius:99, padding:'6px 14px', fontWeight:700, fontSize:15, color:'#A56644', textDecoration:'none' }}>
-            🔥 {user.streak_current}
+            🔥 {currentUser.streak_current}
           </Link>
           <div style={{ display:'flex', alignItems:'center', gap:6, background:'#DDF4FF', borderRadius:99, padding:'6px 14px', fontWeight:700, fontSize:15, color:'#1453A3' }}>
-            💎 {user.coins_balance.toLocaleString()}
+            💎 {currentUser.coins_balance.toLocaleString()}
           </div>
         </div>
         <Link href="/profile" style={{ width:42, height:42, borderRadius:14, background:levelInfo.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:700, color:'#fff', textDecoration:'none' }}>
-          {(user.full_name?.[0] || user.username[0]).toUpperCase()}
+          {(currentUser.full_name?.[0] || currentUser.username[0]).toUpperCase()}
         </Link>
       </header>
 
       {/* GREETING */}
       <div style={{ marginBottom:20 }}>
-        <p style={{ margin:'0 0 4px', fontSize:14, color:'var(--color-text-secondary)' }}>أهلاً، {user.full_name?.split(' ')[0] || user.username}!</p>
+        <p style={{ margin:'0 0 4px', fontSize:14, color:'var(--color-text-secondary)' }}>أهلاً، {currentUser.full_name?.split(' ')[0] || currentUser.username}!</p>
         <h1 style={{ margin:0, fontSize:22, fontWeight:800, color:'var(--color-text-primary)', lineHeight:1.3 }}>{quote}</h1>
       </div>
 
@@ -92,13 +95,13 @@ export default function HomePage() {
       <div style={{ background:'var(--color-background-primary)', borderRadius:20, padding:18, marginBottom:16, border:'1px solid var(--color-border-tertiary)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
           <div style={{ width:44, height:44, borderRadius:14, background:levelInfo.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:800, color:'#fff', flexShrink:0 }}>
-            {user.current_level}
+            {currentUser.current_level}
           </div>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:15, fontWeight:700, color:'var(--color-text-primary)', marginBottom:2 }}>{levelInfo.name_ar}</div>
-            {nextLevel && <div style={{ fontSize:12, color:'var(--color-text-tertiary)' }}>{nextLevel.xp_min - user.xp_total} XP للمستوى التالي</div>}
+            {nextLevel && <div style={{ fontSize:12, color:'var(--color-text-tertiary)' }}>{nextLevel.xp_min - currentUser.xp_total} XP للمستوى التالي</div>}
           </div>
-          <div style={{ fontSize:14, fontWeight:700, color:levelInfo.color }}>{user.xp_total.toLocaleString()} XP</div>
+          <div style={{ fontSize:14, fontWeight:700, color:levelInfo.color }}>{currentUser.xp_total.toLocaleString()} XP</div>
         </div>
         <div style={{ height:10, background:'var(--color-background-secondary)', borderRadius:99, overflow:'hidden' }}>
           <div style={{ height:'100%', borderRadius:99, background:levelInfo.color, width:`${xpProgress}%`, transition:'width 0.8s ease' }} />
@@ -187,7 +190,7 @@ export default function HomePage() {
       </div>
 
       {/* UPGRADE BANNER */}
-      {user.subscription_plan === 'free' && (
+      {currentUser.subscription_plan === 'free' && (
         <Link href="/upgrade" style={{ display:'flex', alignItems:'center', gap:14, background:'linear-gradient(135deg, #1CB0F6, #1899D6)', borderRadius:20, padding:'18px 20px', marginBottom:20, textDecoration:'none' }}>
           <span style={{ fontSize:28 }}>👑</span>
           <div style={{ flex:1 }}>
