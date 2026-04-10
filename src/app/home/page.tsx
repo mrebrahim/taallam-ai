@@ -50,13 +50,14 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!user) return
+    const sb = createClient()
     const today = new Date().toISOString().split('T')[0]
-    supabase.from('daily_missions').select('*').eq('user_id', user.id).eq('mission_date', today)
+    sb.from('daily_missions').select('*').eq('user_id', user.id).eq('mission_date', today)
       .then(({ data }) => setMissions(data || []))
-    supabase.from('roadmaps').select('*').order('sort_order')
-      .then(({ data }) => setRoadmaps(data || []))
-    supabase.from('user_roadmap_progress').select('*').eq('user_id', user.id)
-      .then(({ data }) => {
+    sb.from('roadmaps').select('*').order('sort_order')
+      .then(({ data }: { data: any[] | null }) => setRoadmaps(data || []))
+    sb.from('user_roadmap_progress').select('*').eq('user_id', user.id)
+      .then(({ data }: { data: any[] | null }) => {
         if (data) {
           const m: Record<string, any> = {}
           data.forEach((p: any) => { m[p.roadmap_id] = p })
