@@ -20,7 +20,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [authUser, setAuthUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+
   useEffect(() => {
+    // This only runs in the browser — never on server
     const supabase = createClient()
     let cancelled = false
 
@@ -28,14 +30,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data } = await supabase.from('users').select('*').eq('id', userId).single()
         if (!cancelled) setUser(data ?? null)
-      } catch {}
+      } catch {
+        if (!cancelled) setUser(null)
+      }
     }
 
     const init = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (cancelled) return
-        if (!session?.user) { setLoading(false); return }
+        if (!session?.user) {
+          setLoading(false)
+          return
+        }
         setAuthUser(session.user)
         await fetchProfile(session.user.id)
         if (!cancelled) setLoading(false)
@@ -46,21 +53,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     init()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (cancelled) return
-      if (event === 'SIGNED_OUT' || !session) {
-        setAuthUser(null); setUser(null); setLoading(false); return
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (cancelled) return
+        if (event === 'SIGNED_OUT' || !session) {
+          setAuthUser(null)
+          setUser(null)
+          setLoading(false)
+          return
+        }
+        setAuthUser(session.user)
+        if (session.user) await fetchProfile(session.user.id)
+        if (!cancelled) setLoading(false)
       }
-      setAuthUser(session.user)
-      if (session.user) await fetchProfile(session.user.id)
-      setLoading(false)
-    })
+    )
 
-    return () => { cancelled = true; subscription.unsubscribe() }
-  }, [])
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
+  }, []) // runs once on mount
 
   const signOut = async () => {
-    setUser(null); setAuthUser(null)
+    setUser(null)
+    setAuthUser(null)
     await createClient().auth.signOut()
     window.location.replace('/auth/login')
   }
