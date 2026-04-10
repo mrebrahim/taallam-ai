@@ -12,88 +12,71 @@ export function useUser() {
     const supabase = createClient()
     let cancelled = false
 
-    // Safety net — never stay loading more than 5 seconds
-    const timeout = setTimeout(() => {
-      if (!cancelled) setLoading(false)
-    }, 3000)
-
     const fetchProfile = async (userId: string) => {
       try {
-        const { data } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userId)
-          .single()
+        const { data } = await supabase.from('users').select('*').eq('id', userId).single()
         if (!cancelled) setUser(data ?? null)
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
 
     const init = async () => {
       try {
-        // getSession() reads from localStorage — instant, no network call
         const { data: { session } } = await supabase.auth.getSession()
         if (cancelled) return
 
         if (!session?.user) {
+          // No session → done immediately, redirect handled by page
           setLoading(false)
-          clearTimeout(timeout)
           return
         }
 
         setAuthUser(session.user)
         await fetchProfile(session.user.id)
-        if (!cancelled) {
-          setLoading(false)
-          clearTimeout(timeout)
-        }
+        if (!cancelled) setLoading(false)
       } catch {
-        if (!cancelled) {
-          setLoading(false)
-          clearTimeout(timeout)
-        }
+        if (!cancelled) setLoading(false)
       }
     }
 
     init()
 
-    // Listen for auth changes (login/logout)
+    // Listen for auth state changes (handles logout properly)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (cancelled) return
-        setAuthUser(session?.user ?? null)
-        if (session?.user) {
-          await fetchProfile(session.user.id)
-        } else {
+
+        if (event === 'SIGNED_OUT' || !session) {
+          setAuthUser(null)
           setUser(null)
+          setLoading(false)
+          return
         }
+
+        setAuthUser(session.user)
+        if (session.user) await fetchProfile(session.user.id)
         setLoading(false)
-        clearTimeout(timeout)
       }
     )
 
     return () => {
       cancelled = true
-      clearTimeout(timeout)
       subscription.unsubscribe()
     }
   }, [])
 
-  const supabase = createClient()
-
   const signOut = async () => {
+    const supabase = createClient()
+    // Clear state first for instant UI response
+    setUser(null)
+    setAuthUser(null)
     await supabase.auth.signOut()
     window.location.replace('/auth/login')
   }
 
   const refreshUser = async () => {
     if (!authUser) return
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', authUser.id)
-      .single()
+    const supabase = createClient()
+    const { data } = await supabase.from('users').select('*').eq('id', authUser.id).single()
     setUser(data ?? null)
   }
 

@@ -27,14 +27,14 @@ export default function StreakPage() {
   useEffect(() => {
     if (!user) return
     // Load activity dates
-    supabase.from('user_daily_activity').select('activity_date').eq('user_id', user.id)
+    supabase.from('user_daily_activity').select('activity_date').eq('user_id', currentUser.id)
       .then(({ data }) => {
         if (data) setActivityDates(new Set(data.map((d: any) => d.activity_date)))
       })
     // Load enrollments
     supabase.from('user_streak_challenges')
       .select('*, streak_challenges(slug, target_days)')
-      .eq('user_id', user.id)
+      .eq('user_id', currentUser.id)
       .then(({ data }) => {
         if (data) {
           const m: Record<string, any> = {}
@@ -45,11 +45,11 @@ export default function StreakPage() {
     // Load friends
     supabase.from('friendships')
       .select('*, requester:requester_id(id,full_name,username,streak_current,current_level), addressee:addressee_id(id,full_name,username,streak_current,current_level)')
-      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+      .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`)
       .eq('status', 'accepted')
       .then(({ data }) => {
         if (data) {
-          const f = data.map((fr: any) => fr.requester_id === user.id ? fr.addressee : fr.requester).filter(Boolean)
+          const f = data.map((fr: any) => fr.requester_id === currentUser.id ? fr.addressee : fr.requester).filter(Boolean)
           setFriends(f)
         }
       })
@@ -60,7 +60,7 @@ export default function StreakPage() {
     const ch = await supabase.from('streak_challenges').select('id').eq('slug', slug).single()
     if (!ch.data) return
     await supabase.from('user_streak_challenges').upsert({
-      user_id: user.id, challenge_id: ch.data.id, is_active: true, current_day: 0
+      user_id: currentUser.id, challenge_id: ch.data.id, is_active: true, current_day: 0
     }, { onConflict: 'user_id,challenge_id' })
     setEnrollments(prev => ({ ...prev, [slug]: { is_active: true, current_day: 0, completed_at: null } }))
   }
@@ -69,7 +69,7 @@ export default function StreakPage() {
     if (!user || !addFriendInput.trim()) return
     const type = addFriendInput.includes('@') ? 'email' : 'phone'
     await supabase.from('friend_invites').insert({
-      sender_id: user.id, invite_type: type, invite_value: addFriendInput.trim()
+      sender_id: currentUser.id, invite_type: type, invite_value: addFriendInput.trim()
     })
     setInviteSent(true)
     setAddFriendInput('')
@@ -89,7 +89,12 @@ export default function StreakPage() {
   const DAYS_AR = ['س', 'ح', 'ن', 'ث', 'ر', 'خ', 'ج']
   const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']
 
-  if (loading || !user) return null
+  if (!loading && !user) {
+    if (typeof window !== 'undefined') window.location.replace('/auth/login')
+    return null
+  }
+  if (loading) return null
+  const currentUser = user!
 
   const currentChallenge = CHALLENGES.find(c => enrollments[c.slug]?.is_active && !enrollments[c.slug]?.completed_at)
   const currentEnrollment = currentChallenge ? enrollments[currentChallenge.slug] : null
@@ -122,7 +127,7 @@ export default function StreakPage() {
               <div style={{ fontSize: 72, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' }}>🔥</div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: '2px 10px', fontSize: 12, marginBottom: 4, display: 'inline-block' }}>رابطة الحماسة</div>
-                <div style={{ fontSize: 56, fontWeight: 900, lineHeight: 1, color: '#fff' }}>{user.streak_current}</div>
+                <div style={{ fontSize: 56, fontWeight: 900, lineHeight: 1, color: '#fff' }}>{currentUser.streak_current}</div>
                 <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.9)' }}>يوم حماسة!</div>
               </div>
             </div>
@@ -198,7 +203,7 @@ export default function StreakPage() {
                 const completed = enrolled?.completed_at
                 const active = enrolled?.is_active && !completed
                 const pct = active ? Math.min(100, Math.round((enrolled.current_day / c.days) * 100)) : 0
-                const canEnroll = !enrolled && user.streak_current > 0
+                const canEnroll = !enrolled && currentUser.streak_current > 0
                 return (
                   <div key={c.slug} style={{ background: '#2a2a2a', borderRadius: 16, padding: 16, border: `2px solid ${active ? c.color : '#333'}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

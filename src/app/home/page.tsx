@@ -43,7 +43,7 @@ export default function HomePage() {
       })
   }, [user])
 
-  // If done loading and no user → redirect to login
+  // Redirect to login if not authenticated
   if (!loading && !user) {
     if (typeof window !== 'undefined') window.location.replace('/auth/login')
     return null
@@ -56,7 +56,6 @@ export default function HomePage() {
     </div>
   )
 
-  // At this point user is guaranteed non-null (redirected above if null)
   const currentUser = user!
 
   const levelInfo = getLevelInfo(currentUser.xp_total)
