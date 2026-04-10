@@ -20,15 +20,15 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  // Refresh session
-  const { data: { user } } = await supabase.auth.getUser()
+  // Use getSession instead of getUser — reads from cookie token (set by browser after login)
+  // getUser() makes a network request and is stricter; getSession() trusts the JWT in cookie
+  const { data: { session } } = await supabase.auth.getSession()
 
-  // Protect routes
   const pathname = request.nextUrl.pathname
   const protectedPaths = ['/home', '/learn', '/profile', '/challenges', '/leaderboard', '/streak', '/upgrade']
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
-  if (isProtected && !user) {
+  if (isProtected && !session) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
