@@ -20,9 +20,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [authUser, setAuthUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
-
   useEffect(() => {
+    const supabase = createClient()
     let cancelled = false
 
     const fetchProfile = async (userId: string) => {
@@ -62,13 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     setUser(null); setAuthUser(null)
-    await supabase.auth.signOut()
+    await createClient().auth.signOut()
     window.location.replace('/auth/login')
   }
 
   const refreshUser = async () => {
     if (!authUser) return
-    const { data } = await supabase.from('users').select('*').eq('id', authUser.id).single()
+    const { data } = await createClient().from('users').select('*').eq('id', authUser.id).single()
     setUser(data ?? null)
   }
 

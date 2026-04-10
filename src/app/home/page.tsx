@@ -43,9 +43,8 @@ export default function HomePage() {
   const [progress, setProgress] = useState<Record<string, any>>({})
   const [roadmaps, setRoadmaps] = useState<any[]>([])
   const [quote] = useState(() => MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)])
-  const supabase = createClient()
-
   useEffect(() => {
+    const supabase = createClient()
     if (!loading && !user) window.location.replace('/auth/login')
   }, [loading, user])
 
