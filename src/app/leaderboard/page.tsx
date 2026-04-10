@@ -46,6 +46,7 @@ export default function LeaderboardPage() {
       })
   }, [user, period])
 
+  if (!loading && !user) { if (typeof window !== "undefined") window.location.replace("/auth/login"); return null }
   if (loading) return <div className="lb-loading">جاري التحميل...</div>
   if (!user) { if (typeof window !== 'undefined') window.location.href = '/auth/login'; return null }
 

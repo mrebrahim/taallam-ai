@@ -64,6 +64,7 @@ function UpgradeContent() {
   const success = params.get('success')
   const cancelled = params.get('cancelled')
 
+  if (!loading && !user) { if (typeof window !== "undefined") window.location.replace("/auth/login"); return null }
   if (loading) return <div className="up-loading">جاري التحميل...</div>
 
   return (

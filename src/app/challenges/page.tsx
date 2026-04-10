@@ -49,6 +49,7 @@ export default function ChallengesPage() {
       })
   }, [user])
 
+  if (!loading && !user) { if (typeof window !== "undefined") window.location.replace("/auth/login"); return null }
   if (loading) return <div className="ch-loading">جاري التحميل...</div>
   if (!user) { if (typeof window !== 'undefined') window.location.href = '/auth/login'; return null }
 
