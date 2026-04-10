@@ -16,21 +16,17 @@ export function useUser() {
       try {
         const { data } = await supabase.from('users').select('*').eq('id', userId).single()
         if (!cancelled) setUser(data ?? null)
-      } catch {
-        if (!cancelled) setUser(null)
-      }
+      } catch { if (!cancelled) setUser(null) }
     }
 
-    // Hard timeout — NEVER stay loading more than 3 seconds
+    // Hard timeout — max 4 seconds
     const timeout = setTimeout(() => {
-      if (!cancelled) {
-        console.log('[useUser] timeout — forcing loading=false')
-        setLoading(false)
-      }
-    }, 3000)
+      if (!cancelled) setLoading(false)
+    }, 4000)
 
     const init = async () => {
       try {
+        // Try getSession first (fast, from localStorage/cookie)
         const { data: { session } } = await supabase.auth.getSession()
         if (cancelled) return
         clearTimeout(timeout)

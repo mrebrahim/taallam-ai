@@ -5,19 +5,14 @@ import { useState } from 'react'
 export function GoogleButton({ label = 'تسجيل الدخول بـ Google' }: { label?: string }) {
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
-
   const handleGoogle = async () => {
     setLoading(true)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
-        queryParams: { access_type: 'offline', prompt: 'consent' },
-      },
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
     })
     setLoading(false)
   }
-
   return (
     <button onClick={handleGoogle} disabled={loading} className="social-btn" aria-label={label}>
       <svg width="20" height="20" viewBox="0 0 24 24">
@@ -34,7 +29,6 @@ export function GoogleButton({ label = 'تسجيل الدخول بـ Google' }: 
 export function AppleButton({ label = 'تسجيل الدخول بـ Apple' }: { label?: string }) {
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
-
   const handleApple = async () => {
     setLoading(true)
     await supabase.auth.signInWithOAuth({
@@ -43,7 +37,6 @@ export function AppleButton({ label = 'تسجيل الدخول بـ Apple' }: { 
     })
     setLoading(false)
   }
-
   return (
     <button onClick={handleApple} disabled={loading} className="social-btn social-btn-dark" aria-label={label}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -67,12 +60,10 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    setSuccess(null)
 
     if (mode === 'signup') {
       const { error } = await supabase.auth.signUp({
-        email,
-        password,
+        email, password,
         options: {
           data: { full_name: fullName },
           emailRedirectTo: `${window.location.origin}/api/auth/callback`,
@@ -84,48 +75,40 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
       return
     }
 
-    // Login flow — wait for session to be set before navigating
+    // Login
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-
     if (error || !data.session) {
       setError('البريد الإلكتروني أو كلمة المرور غلط')
       setLoading(false)
       return
     }
 
-    // Session confirmed — hard redirect so server picks up the cookie
-    window.location.href = '/home?t=' + Date.now()
+    // Set server-side cookie via API route
+    try {
+      await fetch('/api/auth/set-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        }),
+      })
+    } catch {}
+
+    // Hard reload to pick up cookie
+    window.location.href = '/home'
   }
 
   return (
     <form onSubmit={handleSubmit} className="auth-form" dir="rtl">
       {mode === 'signup' && (
-        <input
-          type="text"
-          placeholder="الاسم الكامل"
-          value={fullName}
-          onChange={e => setFullName(e.target.value)}
-          required
-          className="auth-input"
-        />
+        <input type="text" placeholder="الاسم الكامل" value={fullName}
+          onChange={e => setFullName(e.target.value)} required className="auth-input" />
       )}
-      <input
-        type="email"
-        placeholder="البريد الإلكتروني"
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-        required
-        className="auth-input"
-      />
-      <input
-        type="password"
-        placeholder="كلمة المرور"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        required
-        minLength={6}
-        className="auth-input"
-      />
+      <input type="email" placeholder="البريد الإلكتروني" value={email}
+        onChange={e => setEmail(e.target.value)} required className="auth-input" />
+      <input type="password" placeholder="كلمة المرور" value={password}
+        onChange={e => setPassword(e.target.value)} required minLength={6} className="auth-input" />
       {error && <p className="auth-error">{error}</p>}
       {success && <p className="auth-success">{success}</p>}
       <button type="submit" disabled={loading} className="auth-submit">
