@@ -65,9 +65,9 @@ export default function HomePage() {
       {/* TOP BAR */}
       <header style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
         <div style={{ display:'flex', gap:8 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:6, background:'#FFF5D3', borderRadius:99, padding:'6px 14px', fontWeight:700, fontSize:15, color:'#A56644' }}>
+          <Link href="/streak" style={{ display:'flex', alignItems:'center', gap:6, background:'#FFF5D3', borderRadius:99, padding:'6px 14px', fontWeight:700, fontSize:15, color:'#A56644', textDecoration:'none' }}>
             🔥 {user.streak_current}
-          </div>
+          </Link>
           <div style={{ display:'flex', alignItems:'center', gap:6, background:'#DDF4FF', borderRadius:99, padding:'6px 14px', fontWeight:700, fontSize:15, color:'#1453A3' }}>
             💎 {user.coins_balance.toLocaleString()}
           </div>
