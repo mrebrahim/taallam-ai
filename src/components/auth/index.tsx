@@ -94,7 +94,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
     }
 
     // Session confirmed — hard redirect so server picks up the cookie
-    window.location.replace('/home')
+    window.location.href = '/home?t=' + Date.now()
   }
 
   return (
