@@ -132,11 +132,11 @@ export default function ProfilePage() {
       {/* Bottom Nav */}
       <nav className="bottom-nav">
         {[
-          { href: '/home',        icon: '🏠', label: 'الرئيسية' },
-          { href: '/learn',       icon: '📚', label: 'التعلم' },
-          { href: '/challenges',  icon: '⚔️', label: 'التحديات' },
+                    { href: '/profile', icon: '👤', label: 'الملف', active: true },
           { href: '/leaderboard', icon: '🏆', label: 'الترتيب' },
-          { href: '/profile',     icon: '👤', label: 'الملف', active: true },
+          { href: '/challenges', icon: '⚔️', label: 'التحديات' },
+          { href: '/learn', icon: '📚', label: 'التعلم' },
+          { href: '/home', icon: '🏠', label: 'الرئيسية' },
         ].map(n => (
           <Link key={n.href} href={n.href} className={`nav-item ${(n as any).active ? 'nav-active' : ''}`}>
             <span className="nav-icon">{n.icon}</span>

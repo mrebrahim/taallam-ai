@@ -303,7 +303,7 @@ export default function StreakPage() {
       )}
 
       {/* Bottom Nav */}
-      <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: '#1a1a1a', borderTop: '2px solid #333', display: 'flex', padding: '8px 0 16px', zIndex: 100 }}>
+      <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: '#1a1a1a', borderTop: '2px solid #333', display: 'flex', padding: '8px 0 16px', zIndex: 100, direction: 'ltr' }}>
         {[
           { href: '/home',        icon: '🏠', label: 'الرئيسية' },
           { href: '/learn',       icon: '📚', label: 'التعلم'   },

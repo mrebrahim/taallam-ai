@@ -19,11 +19,11 @@ const MOTIVATIONAL = [
 ]
 
 const NAV = [
-  { href:'/home',        icon:'🏠', label:'الرئيسية', active:true  },
-  { href:'/learn',       icon:'📚', label:'التعلم'                 },
-  { href:'/challenges',  icon:'⚔️',  label:'التحديات'              },
-  { href:'/leaderboard', icon:'🏆', label:'الترتيب'                },
   { href:'/profile',     icon:'👤', label:'ملفي'                    },
+  { href:'/leaderboard', icon:'🏆', label:'الترتيب'                },
+  { href:'/challenges',  icon:'⚔️',  label:'التحديات'              },
+  { href:'/learn',       icon:'📚', label:'التعلم'                 },
+  { href:'/home',        icon:'🏠', label:'الرئيسية', active:true  },
 ]
 
 export default function HomePage() {
@@ -80,7 +80,7 @@ export default function HomePage() {
           <div key={i} style={{ background:'#f5f5f5', borderRadius:16, padding:14, marginBottom:10, height:70 }} />
         ))}
         {/* Bottom nav */}
-        <nav style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'var(--color-background-primary)', borderTop:'2px solid var(--color-border-tertiary)', display:'flex', padding:'8px 0 16px', zIndex:100 }}>
+        <nav style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'var(--color-background-primary)', borderTop:'2px solid var(--color-border-tertiary)', display:'flex', padding:'8px 0 16px', zIndex:100, direction:'ltr' }}>
           {NAV.map(n => (
             <Link key={n.href} href={n.href} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, textDecoration:'none', padding:'4px 0' }}>
               <span style={{ fontSize:22 }}>{n.icon}</span>
@@ -114,7 +114,7 @@ export default function HomePage() {
           </div>
         </div>
         <Link href="/profile" style={{ width:42, height:42, borderRadius:14, background:levelInfo.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:700, color:'#fff', textDecoration:'none' }}>
-          {(user.full_name?.[0] || user.username[0]).toUpperCase()}
+          {(user.full_name?.match(/[a-zA-Z]/)?.[0] || user.username?.match(/[a-zA-Z]/)?.[0] || '👤')}
         </Link>
       </header>
 
@@ -233,7 +233,7 @@ export default function HomePage() {
       )}
 
       {/* BOTTOM NAV */}
-      <nav style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'var(--color-background-primary)', borderTop:'2px solid var(--color-border-tertiary)', display:'flex', padding:'8px 0 16px', zIndex:100 }}>
+      <nav style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'var(--color-background-primary)', borderTop:'2px solid var(--color-border-tertiary)', display:'flex', padding:'8px 0 16px', zIndex:100, direction:'ltr' }}>
         {NAV.map(n => (
           <Link key={n.href} href={n.href} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, textDecoration:'none', padding:'4px 0' }}>
             <span style={{ fontSize:22 }}>{n.icon}</span>

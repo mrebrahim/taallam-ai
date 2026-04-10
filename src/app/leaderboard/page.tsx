@@ -135,11 +135,11 @@ export default function LeaderboardPage() {
       {/* Bottom Nav */}
       <nav className="bottom-nav">
         {[
-          { href: '/home',        icon: '🏠', label: 'الرئيسية' },
-          { href: '/learn',       icon: '📚', label: 'التعلم' },
-          { href: '/challenges',  icon: '⚔️', label: 'التحديات' },
+          { href: '/profile',     icon: '👤', label: 'ملفي' },
           { href: '/leaderboard', icon: '🏆', label: 'الترتيب', active: true },
-          { href: '/profile',     icon: '👤', label: 'الملف' },
+          { href: '/challenges',  icon: '⚔️', label: 'التحديات' },
+          { href: '/learn',       icon: '📚', label: 'التعلم' },
+          { href: '/home',        icon: '🏠', label: 'الرئيسية' },
         ].map(n => (
           <Link key={n.href} href={n.href} className={`nav-item ${(n as any).active ? 'nav-active' : ''}`}>
             <span className="nav-icon">{n.icon}</span>

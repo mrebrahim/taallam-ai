@@ -176,13 +176,13 @@ export default function LearnPage() {
       )}
 
       {/* Bottom Nav */}
-      <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'var(--color-background-primary)', borderTop: '2px solid var(--color-border-tertiary)', display: 'flex', padding: '8px 0 16px', zIndex: 100 }}>
+      <nav style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'var(--color-background-primary)', borderTop: '2px solid var(--color-border-tertiary)', display: 'flex', padding: '8px 0 16px', zIndex: 100, direction: 'ltr' }}>
         {[
-          { href: '/home',        icon: '🏠', label: 'الرئيسية' },
-          { href: '/learn',       icon: '📚', label: 'التعلم',    active: true },
-          { href: '/challenges',  icon: '⚔️',  label: 'التحديات' },
-          { href: '/leaderboard', icon: '🏆', label: 'الترتيب'  },
-          { href: '/profile',     icon: '👤', label: 'ملفي'      },
+                    { href: '/profile', icon: '👤', label: 'ملفي' },
+          { href: '/leaderboard', icon: '🏆', label: 'الترتيب' },
+          { href: '/challenges', icon: '⚔️', label: 'التحديات' },
+          { href: '/learn', icon: '📚', label: 'التعلم', active: true },
+          { href: '/home', icon: '🏠', label: 'الرئيسية' },
         ].map(n => (
           <Link key={n.href} href={n.href} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, textDecoration: 'none', padding: '4px 0' }}>
             <span style={{ fontSize: 22 }}>{n.icon}</span>
