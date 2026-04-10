@@ -74,7 +74,7 @@ export default function HomePage() {
         <div style={{ width:200, height:20, borderRadius:8, background:'#eee', marginBottom:8 }} />
         <div style={{ width:280, height:28, borderRadius:8, background:'#eee', marginBottom:20 }} />
         {/* Skeleton XP card */}
-        <div style={{ background:'#fff', borderRadius:20, padding:18, marginBottom:16, height:80, background:'#f5f5f5' }} />
+        <div style={{ background:'#fff', borderRadius:20, padding:18, marginBottom:16, height:80 }} />
         {/* Skeleton cards */}
         {[1,2,3].map(i => (
           <div key={i} style={{ background:'#f5f5f5', borderRadius:16, padding:14, marginBottom:10, height:70 }} />
