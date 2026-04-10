@@ -1,143 +1,214 @@
 'use client'
 import { useUser } from '@/hooks/useUser'
-import { XPBar, StreakCounter, CoinBalance, StatsRow } from '@/components/gamification'
-import { getLevelInfo } from '@/types'
+import { getLevelInfo, LEVELS } from '@/types'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-const ROADMAP_META = {
-  n8n_automation: { emoji: '⚡', color: '#10b981', label: 'أتمتة n8n' },
-  ai_video:       { emoji: '🎬', color: '#f97316', label: 'AI Video' },
-  vibe_coding:    { emoji: '💻', color: '#8b5cf6', label: 'Vibe Coding' },
+const ROADMAP_META: Record<string, { emoji: string; color: string; bg: string; label: string; desc: string }> = {
+  n8n_automation: { emoji: '⚡', color: '#58CC02', bg: '#D7FFB8', label: 'أتمتة n8n',   desc: 'وصّل كل أدواتك تلقائياً' },
+  ai_video:       { emoji: '🎬', color: '#FF9600', bg: '#FFCE8E', label: 'AI Video',     desc: 'أنشئ فيديوهات بالذكاء الاصطناعي' },
+  vibe_coding:    { emoji: '💻', color: '#CE82FF', bg: '#F5E6FF', label: 'Vibe Coding',  desc: 'ابنِ تطبيقات بدون كود تقليدي' },
 }
+
+const MOTIVATIONAL = [
+  'هتبقى محترف قريباً! 🔥',
+  'كل يوم خطوة للأمام! 💪',
+  'إنت بتعمل حاجة عظيمة! ⭐',
+  'استمر — الـ streak بيحسبك! 🎯',
+]
 
 export default function HomePage() {
   const { user, loading, signOut } = useUser()
   const [missions, setMissions] = useState<any[]>([])
+  const [progress, setProgress] = useState<Record<string, any>>({})
+  const [roadmaps, setRoadmaps] = useState<any[]>([])
+  const [quote] = useState(() => MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)])
   const supabase = createClient()
 
   useEffect(() => {
     if (!user) return
-    supabase
-      .from('daily_missions')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('mission_date', new Date().toISOString().split('T')[0])
+    const today = new Date().toISOString().split('T')[0]
+    supabase.from('daily_missions').select('*').eq('user_id', user.id).eq('mission_date', today)
       .then(({ data }) => setMissions(data || []))
+    supabase.from('roadmaps').select('*').order('sort_order')
+      .then(({ data }) => setRoadmaps(data || []))
+    supabase.from('user_roadmap_progress').select('*').eq('user_id', user.id)
+      .then(({ data }) => {
+        if (data) {
+          const m: Record<string, any> = {}
+          data.forEach((p: any) => { m[p.roadmap_id] = p })
+          setProgress(m)
+        }
+      })
   }, [user])
 
-  if (loading) return <div className="home-loading">جاري التحميل...</div>
+  if (loading) return (
+    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', fontFamily:'var(--font-sans)', gap:12 }}>
+      <span style={{ fontSize:48 }}>🦉</span>
+      <p style={{ color:'var(--color-text-secondary)', margin:0 }}>جاري التحميل...</p>
+    </div>
+  )
   if (!user) { if (typeof window !== 'undefined') window.location.href = '/auth/login'; return null }
 
   const levelInfo = getLevelInfo(user.xp_total)
+  const nextLevel = LEVELS.find(l => l.level === user.current_level + 1)
+  const xpProgress = nextLevel
+    ? Math.min(100, ((user.xp_total - levelInfo.xp_min) / (nextLevel.xp_min - levelInfo.xp_min)) * 100)
+    : 100
+  const completedMissions = missions.filter(m => m.completed).length
+  const enrolledRoadmaps = roadmaps.filter(r => progress[r.id])
 
   return (
-    <div className="home-page" dir="rtl">
+    <div dir="rtl" style={{ maxWidth:480, margin:'0 auto', padding:'16px 16px 90px', fontFamily:'var(--font-sans)', background:'var(--color-background-tertiary)', minHeight:'100vh' }}>
 
-      {/* ── Top Bar ── */}
-      <header className="home-header">
-        <div className="home-header-left">
-          <StreakCounter streak={user.streak_current} />
-          <CoinBalance coins={user.coins_balance} />
+      {/* TOP BAR */}
+      <header style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+        <div style={{ display:'flex', gap:8 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:6, background:'#FFF5D3', borderRadius:99, padding:'6px 14px', fontWeight:700, fontSize:15, color:'#A56644' }}>
+            🔥 {user.streak_current}
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:6, background:'#DDF4FF', borderRadius:99, padding:'6px 14px', fontWeight:700, fontSize:15, color:'#1453A3' }}>
+            💎 {user.coins_balance.toLocaleString()}
+          </div>
         </div>
-        <button onClick={signOut} className="home-signout">خروج</button>
+        <Link href="/profile" style={{ width:42, height:42, borderRadius:14, background:levelInfo.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:700, color:'#fff', textDecoration:'none' }}>
+          {(user.full_name?.[0] || user.username[0]).toUpperCase()}
+        </Link>
       </header>
 
-      {/* ── Hero Card ── */}
-      <section className="home-hero">
-        <div className="home-avatar" style={{ background: levelInfo.color }}>
-          {user.full_name?.[0] || user.username[0]}
-        </div>
-        <div className="home-hero-info">
-          <h1>أهلاً، {user.full_name?.split(' ')[0] || user.username}!</h1>
-          <p style={{ color: levelInfo.color }}>Level {user.current_level} — {levelInfo.name_ar}</p>
-        </div>
-        {user.subscription_plan !== 'free' && (
-          <span className="home-plan-badge">
-            {user.subscription_plan === 'elite' ? '⭐ Elite' : '🔵 Pro'}
-          </span>
-        )}
-      </section>
+      {/* GREETING */}
+      <div style={{ marginBottom:20 }}>
+        <p style={{ margin:'0 0 4px', fontSize:14, color:'var(--color-text-secondary)' }}>أهلاً، {user.full_name?.split(' ')[0] || user.username}!</p>
+        <h1 style={{ margin:0, fontSize:22, fontWeight:800, color:'var(--color-text-primary)', lineHeight:1.3 }}>{quote}</h1>
+      </div>
 
-      {/* ── XP Bar ── */}
-      <section className="home-section">
-        <XPBar xp={user.xp_total} />
-      </section>
-
-      {/* ── Stats ── */}
-      <section className="home-card">
-        <StatsRow xp={user.xp_total} coins={user.coins_balance} streak={user.streak_current} />
-      </section>
-
-      {/* ── Daily Missions ── */}
-      <section className="home-section">
-        <div className="home-section-title">
-          <span>مهام اليوم</span>
-          <span className="home-section-sub">{missions.filter(m => m.completed).length}/{missions.length}</span>
+      {/* XP CARD */}
+      <div style={{ background:'var(--color-background-primary)', borderRadius:20, padding:18, marginBottom:16, border:'1px solid var(--color-border-tertiary)' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
+          <div style={{ width:44, height:44, borderRadius:14, background:levelInfo.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:800, color:'#fff', flexShrink:0 }}>
+            {user.current_level}
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:15, fontWeight:700, color:'var(--color-text-primary)', marginBottom:2 }}>{levelInfo.name_ar}</div>
+            {nextLevel && <div style={{ fontSize:12, color:'var(--color-text-tertiary)' }}>{nextLevel.xp_min - user.xp_total} XP للمستوى التالي</div>}
+          </div>
+          <div style={{ fontSize:14, fontWeight:700, color:levelInfo.color }}>{user.xp_total.toLocaleString()} XP</div>
         </div>
-        {missions.length === 0 ? (
-          <div className="home-empty-missions">لا توجد مهام اليوم — ابدأ درساً لإنشاء مهام!</div>
-        ) : (
-          <div className="home-missions-list">
+        <div style={{ height:10, background:'var(--color-background-secondary)', borderRadius:99, overflow:'hidden' }}>
+          <div style={{ height:'100%', borderRadius:99, background:levelInfo.color, width:`${xpProgress}%`, transition:'width 0.8s ease' }} />
+        </div>
+      </div>
+
+      {/* DAILY MISSIONS */}
+      {missions.length > 0 && (
+        <div style={{ marginBottom:20 }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+            <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:'var(--color-text-primary)' }}>مهام اليوم</h2>
+            <span style={{ background: completedMissions===missions.length ? '#D7FFB8' : '#FFF5D3', color: completedMissions===missions.length ? '#27500A' : '#633806', borderRadius:99, padding:'3px 10px', fontSize:13, fontWeight:700 }}>
+              {completedMissions}/{missions.length}
+            </span>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {missions.map(m => (
-              <div key={m.id} className={`mission-item ${m.completed ? 'mission-done' : ''}`}>
-                <span className="mission-check">{m.completed ? '✓' : '○'}</span>
-                <span className="mission-text">
-                  {m.mission_type === 'complete_lesson' && 'أكمل درساً'}
-                  {m.mission_type === 'win_quiz' && 'اربح في quiz'}
-                  {m.mission_type === 'join_challenge' && 'شارك في تحدي'}
-                </span>
-                <span className="mission-xp">+{m.xp_reward} XP</span>
+              <div key={m.id} style={{ display:'flex', alignItems:'center', gap:12, background:'var(--color-background-primary)', borderRadius:16, padding:'12px 14px', border:`2px solid ${m.completed ? '#58CC02' : 'var(--color-border-tertiary)'}`, opacity: m.completed ? 0.7 : 1 }}>
+                <div style={{ width:38, height:38, borderRadius:50, background: m.completed ? '#D7FFB8' : 'var(--color-background-secondary)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
+                  {m.completed ? '✅' : m.mission_type === 'complete_lesson' ? '📚' : m.mission_type === 'win_quiz' ? '⚡' : '🏆'}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:14, fontWeight:600, color:'var(--color-text-primary)', textDecoration: m.completed ? 'line-through' : 'none' }}>
+                    {m.mission_type === 'complete_lesson' && 'أكمل درساً'}
+                    {m.mission_type === 'win_quiz' && 'اربح في Quiz'}
+                    {m.mission_type === 'join_challenge' && 'شارك في تحدي'}
+                  </div>
+                  <div style={{ fontSize:12, color:'#58CC02', fontWeight:700 }}>+{m.xp_reward} XP</div>
+                </div>
               </div>
             ))}
           </div>
-        )}
-      </section>
-
-      {/* ── Quick Start — 3 Roadmaps ── */}
-      <section className="home-section">
-        <div className="home-section-title">ابدأ التعلم</div>
-        <div className="home-roadmaps">
-          {Object.entries(ROADMAP_META).map(([slug, meta]) => (
-            <Link href={`/learn?roadmap=${slug}`} key={slug} className="roadmap-quick-card">
-              <span className="roadmap-quick-emoji" style={{ background: meta.color + '22' }}>
-                {meta.emoji}
-              </span>
-              <span className="roadmap-quick-label">{meta.label}</span>
-              <span className="roadmap-quick-arrow">←</span>
-            </Link>
-          ))}
         </div>
-      </section>
+      )}
 
-      {/* ── Upgrade CTA (free users only) ── */}
-      {user.subscription_plan === 'free' && (
-        <Link href="/upgrade" className="home-upgrade-cta">
-          <span>🚀</span>
-          <div>
-            <strong>ترقى لـ Pro</strong>
-            <p>XP مضاعف + دروس غير محدودة</p>
+      {/* CONTINUE LEARNING */}
+      {enrolledRoadmaps.length > 0 && (
+        <div style={{ marginBottom:20 }}>
+          <h2 style={{ margin:'0 0 10px', fontSize:17, fontWeight:700, color:'var(--color-text-primary)' }}>كمّل من حيث وقفت</h2>
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {enrolledRoadmaps.map(r => {
+              const meta = ROADMAP_META[r.slug]
+              const prog = progress[r.id]
+              if (!meta) return null
+              const pct = r.total_xp > 0 ? Math.min(100, Math.round((prog.total_xp_earned / r.total_xp) * 100)) : 0
+              return (
+                <Link key={r.id} href={`/learn?roadmap=${r.slug}`} style={{ display:'flex', alignItems:'center', gap:14, background:'var(--color-background-primary)', borderRadius:18, padding:'14px 16px', textDecoration:'none', border:'1px solid var(--color-border-tertiary)' }}>
+                  <div style={{ width:52, height:52, borderRadius:14, background:meta.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, flexShrink:0 }}>{meta.emoji}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:15, fontWeight:700, color:'var(--color-text-primary)', marginBottom:6 }}>{meta.label}</div>
+                    <div style={{ height:8, background:'var(--color-background-secondary)', borderRadius:99, overflow:'hidden' }}>
+                      <div style={{ height:'100%', background:meta.color, borderRadius:99, width:`${pct}%`, transition:'width 0.6s ease' }} />
+                    </div>
+                  </div>
+                  <span style={{ fontSize:13, fontWeight:700, color:meta.color, marginRight:4 }}>{pct}%</span>
+                </Link>
+              )
+            })}
           </div>
-          <span className="cta-arrow">←</span>
+        </div>
+      )}
+
+      {/* ALL PATHS */}
+      <div style={{ marginBottom:20 }}>
+        <h2 style={{ margin:'0 0 10px', fontSize:17, fontWeight:700, color:'var(--color-text-primary)' }}>
+          {enrolledRoadmaps.length === 0 ? 'ابدأ رحلتك' : 'كل المسارات'}
+        </h2>
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {Object.entries(ROADMAP_META).map(([slug, meta]) => {
+            const roadmap = roadmaps.find(r => r.slug === slug)
+            const isEnrolled = roadmap && progress[roadmap.id]
+            return (
+              <Link key={slug} href={`/learn?roadmap=${slug}`} style={{ display:'flex', alignItems:'center', gap:12, background:'var(--color-background-primary)', borderRadius:16, padding:'14px 16px', textDecoration:'none', border:'1px solid var(--color-border-tertiary)' }}>
+                <div style={{ width:48, height:48, borderRadius:14, background:meta.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, flexShrink:0 }}>{meta.emoji}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:15, fontWeight:700, color:'var(--color-text-primary)', marginBottom:2 }}>{meta.label}</div>
+                  <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>{meta.desc}</div>
+                </div>
+                {isEnrolled && (
+                  <span style={{ background:meta.bg, color:meta.color, borderRadius:99, padding:'3px 10px', fontSize:11, fontWeight:700, flexShrink:0 }}>مسجّل</span>
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* UPGRADE BANNER */}
+      {user.subscription_plan === 'free' && (
+        <Link href="/upgrade" style={{ display:'flex', alignItems:'center', gap:14, background:'linear-gradient(135deg, #1CB0F6, #1899D6)', borderRadius:20, padding:'18px 20px', marginBottom:20, textDecoration:'none' }}>
+          <span style={{ fontSize:28 }}>👑</span>
+          <div style={{ flex:1 }}>
+            <div style={{ color:'#fff', fontWeight:800, fontSize:16, marginBottom:2 }}>ترقّى لـ Pro</div>
+            <div style={{ color:'#BBF2FF', fontSize:13 }}>XP مضاعف + دروس غير محدودة</div>
+          </div>
+          <span style={{ background:'#fff', color:'#1CB0F6', borderRadius:12, padding:'8px 16px', fontSize:13, fontWeight:800, flexShrink:0 }}>ابدأ</span>
         </Link>
       )}
 
-      {/* ── Bottom Nav ── */}
-      <nav className="bottom-nav">
+      {/* BOTTOM NAV */}
+      <nav style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'var(--color-background-primary)', borderTop:'2px solid var(--color-border-tertiary)', display:'flex', padding:'8px 0 16px', zIndex:100 }}>
         {[
-          { href: '/home',        icon: '🏠', label: 'الرئيسية' },
-          { href: '/learn',       icon: '📚', label: 'التعلم' },
-          { href: '/challenges',  icon: '⚔️', label: 'التحديات' },
-          { href: '/leaderboard', icon: '🏆', label: 'الترتيب' },
-          { href: '/profile',     icon: '👤', label: 'الملف' },
+          { href:'/home',        icon:'🏠', label:'الرئيسية', active:true  },
+          { href:'/learn',       icon:'📚', label:'التعلم'                 },
+          { href:'/challenges',  icon:'⚔️',  label:'التحديات'             },
+          { href:'/leaderboard', icon:'🏆', label:'الترتيب'               },
+          { href:'/profile',     icon:'👤', label:'ملفي'                   },
         ].map(n => (
-          <Link key={n.href} href={n.href} className="nav-item">
-            <span className="nav-icon">{n.icon}</span>
-            <span className="nav-label">{n.label}</span>
+          <Link key={n.href} href={n.href} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, textDecoration:'none', padding:'4px 0' }}>
+            <span style={{ fontSize:22 }}>{n.icon}</span>
+            <span style={{ fontSize:10, color: n.active ? '#1CB0F6' : 'var(--color-text-tertiary)', fontWeight: n.active ? 700 : 400 }}>{n.label}</span>
           </Link>
         ))}
       </nav>
+
     </div>
   )
 }
