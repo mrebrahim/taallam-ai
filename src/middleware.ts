@@ -7,6 +7,7 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGci
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
+  // Only purpose: refresh the session cookie so it doesn't expire
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
       getAll() { return request.cookies.getAll() },
@@ -20,19 +21,8 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  // Use getSession instead of getUser — reads from cookie token (set by browser after login)
-  // getUser() makes a network request and is stricter; getSession() trusts the JWT in cookie
-  const { data: { session } } = await supabase.auth.getSession()
-
-  const pathname = request.nextUrl.pathname
-  const protectedPaths = ['/home', '/learn', '/profile', '/challenges', '/leaderboard', '/streak', '/upgrade']
-  const isProtected = protectedPaths.some(p => pathname.startsWith(p))
-
-  if (isProtected && !session) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
-  }
+  // Just refresh — DO NOT redirect here. Pages handle their own auth.
+  await supabase.auth.getSession()
 
   return supabaseResponse
 }
