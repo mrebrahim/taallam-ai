@@ -10,39 +10,63 @@ export function useUser() {
   const supabase = createClient()
 
   useEffect(() => {
-    // Get current session
-    supabase.auth.getUser().then(async ({ data: { user: authU } }) => {
-      setAuthUser(authU)
-      if (authU) {
+    let cancelled = false
+
+    // Safety timeout — never stay loading more than 6 seconds
+    const timeout = setTimeout(() => {
+      if (!cancelled) setLoading(false)
+    }, 6000)
+
+    const init = async () => {
+      try {
+        const { data: { user: authU }, error } = await supabase.auth.getUser()
+        if (cancelled) return
+        if (error || !authU) {
+          setLoading(false)
+          return
+        }
+        setAuthUser(authU)
         const { data } = await supabase
           .from('users')
           .select('*')
           .eq('id', authU.id)
           .single()
-        setUser(data)
+        if (!cancelled) {
+          setUser(data ?? null)
+          setLoading(false)
+        }
+      } catch {
+        if (!cancelled) setLoading(false)
       }
-      setLoading(false)
-    })
+    }
 
-    // Listen for auth changes
+    init()
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (cancelled) return
         setAuthUser(session?.user ?? null)
         if (session?.user) {
-          const { data } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-          setUser(data)
+          try {
+            const { data } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
+            if (!cancelled) setUser(data ?? null)
+          } catch {}
         } else {
           setUser(null)
         }
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signOut = async () => {
@@ -57,7 +81,7 @@ export function useUser() {
       .select('*')
       .eq('id', authUser.id)
       .single()
-    setUser(data)
+    setUser(data ?? null)
   }
 
   return { user, authUser, loading, signOut, refreshUser }
