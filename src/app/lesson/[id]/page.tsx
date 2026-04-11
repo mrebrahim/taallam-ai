@@ -53,9 +53,7 @@ export default function LessonPage() {
       p_amount: lesson.xp_reward,
       p_reason: 'lesson_complete',
       p_reference_id: id,
-    }
-    .then(() => {})
-    .catch(() => {})
+    })
 
     setCompleted(true)
     setCompleting(false)
