@@ -77,15 +77,34 @@ export default function LessonPage() {
   const COLORS: Record<string, string> = { n8n_automation:'#58CC02', ai_video:'#FF9600', vibe_coding:'#CE82FF' }
   const color = COLORS[roadmapSlug] || '#58CC02'
 
-  // Convert YouTube URL to embed
-  const getEmbedUrl = (url: string) => {
-    if (!url) return null
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)
-    if (match) return `https://www.youtube.com/embed/${match[1]}`
-    return url
+  // Get Vimeo embed URL (clean player - no logos, no related videos)
+  const getVimeoEmbed = (lesson: any): string | null => {
+    // Priority: vimeo_id > vimeo_url > video_url (YouTube fallback)
+    let vimeoId: string | null = null
+    
+    if (lesson.vimeo_id) {
+      vimeoId = lesson.vimeo_id
+    } else if (lesson.vimeo_url) {
+      const match = lesson.vimeo_url.match(/vimeo\.com\/(\d+)/)
+      if (match) vimeoId = match[1]
+    }
+    
+    if (vimeoId) {
+      // Clean Vimeo player: no title, no byline, no portrait, no related videos
+      return `https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0&badge=0&autopause=0&player_id=0&app_id=58479`
+    }
+    
+    // Fallback to YouTube if no Vimeo
+    if (lesson.video_url) {
+      const match = lesson.video_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)
+      if (match) return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1`
+    }
+    
+    return null
   }
 
-  const embedUrl = lesson.video_url ? getEmbedUrl(lesson.video_url) : null
+  const embedUrl = getVimeoEmbed(lesson)
+  const isVimeo = !!(lesson.vimeo_id || lesson.vimeo_url)
 
   return (
     <div dir="rtl" style={{ maxWidth:480, margin:'0 auto', minHeight:'100vh', background:'#f7f7f7', fontFamily:"'Segoe UI', Tahoma, sans-serif", paddingBottom:100 }}>
@@ -114,7 +133,11 @@ export default function LessonPage() {
                 src={embedUrl}
                 style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
                 allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allow={isVimeo 
+                  ? "autoplay; fullscreen; picture-in-picture; clipboard-write"
+                  : "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                }
+                title={lesson.title_ar}
               />
             </div>
           </div>
