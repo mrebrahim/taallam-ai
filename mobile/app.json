@@ -15,7 +15,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.ibrahimschool.taallam",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSUserNotificationUsageDescription": "عشان نبعتلك تذكير بدرسك اليومي وتحافظ على الـ streak"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -33,6 +36,15 @@
         "expo-av",
         {
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#58CC02",
+          "sounds": [],
+          "androidMode": "default"
         }
       ]
     ],
