@@ -25,10 +25,11 @@ export default function Dashboard() {
   }, [])
 
   const NAV = [
-    { href:'/lessons',    icon:'📚', label:'الدروس',    desc:'أضف وعدّل دروس المسارات', color:'#58CC02' },
-    { href:'/challenges', icon:'⚔️',  label:'التحديات',  desc:'أنشئ تحديات أسبوعية', color:'#CE82FF' },
-    { href:'/users',      icon:'👥', label:'المستخدمين', desc:'عرض بيانات المستخدمين', color:'#1CB0F6' },
-    { href:'/roadmaps',   icon:'🗺️', label:'المسارات',  desc:'إدارة مسارات التعلم', color:'#FF9600' },
+    { href:'/lessons',     icon:'📚', label:'الدروس',     desc:'أضف وعدّل دروس المسارات', color:'#58CC02' },
+    { href:'/challenges',  icon:'⚔️',  label:'التحديات',   desc:'أنشئ تحديات أسبوعية', color:'#CE82FF' },
+    { href:'/enrollments', icon:'🎓', label:'المشتركين',  desc:'سجّل مستخدمين في الكورسات', color:'#1CB0F6' },
+    { href:'/users',       icon:'👥', label:'المستخدمين', desc:'عرض بيانات كل المستخدمين', color:'#FF9600' },
+    { href:'/roadmaps',    icon:'🗺️', label:'المسارات',   desc:'إدارة مسارات التعلم', color:'#FF4B4B' },
   ]
 
   const STATS = [
