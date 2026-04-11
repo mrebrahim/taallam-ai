@@ -11,61 +11,43 @@ export function useUser() {
   useEffect(() => {
     const supabase = createClient()
     let cancelled = false
-    let resolved = false
 
-    const done = (au: any, u: User | null) => {
-      if (cancelled || resolved) return
-      resolved = true
-      setAuthUser(au)
-      setUser(u)
-      setLoading(false)
-    }
-
-    // Timeout: 6 seconds
-    const timeout = setTimeout(() => {
-      console.warn('[useUser] timeout')
-      done(null, null)
-    }, 6000)
-
-    const fetchProfile = async (userId: string, accessToken?: string): Promise<User | null> => {
+    const fetchAndSet = async (session: any) => {
+      if (!session?.user || cancelled) return
       try {
-        // If we have a token, set it explicitly on the client
-        if (accessToken) {
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: '',
-          })
+        setAuthUser(session.user)
+        const { data } = await supabase
+          .from('users').select('*').eq('id', session.user.id).single()
+        if (!cancelled) {
+          setUser(data ?? null)
+          setLoading(false)
         }
-        const { data, error } = await supabase
-          .from('users').select('*').eq('id', userId).single()
-        console.log('[useUser] fetchProfile:', { data: !!data, error: error?.message, userId })
-        return data ?? null
-      } catch (e) {
-        console.error('[useUser] fetchProfile error:', e)
-        return null
+      } catch {
+        if (!cancelled) setLoading(false)
       }
     }
 
-    // Listen for auth changes
+    // Hard timeout
+    const timeout = setTimeout(() => {
+      if (!cancelled) setLoading(false)
+    }, 5000)
+
+    // Listen FIRST before getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[useUser] onAuthStateChange:', event, !!session, session?.user?.id)
-        if (cancelled) return
-        if (!session?.user) { clearTimeout(timeout); done(null, null); return }
-        if (resolved) return
         clearTimeout(timeout)
-        const profile = await fetchProfile(session.user.id, session.access_token)
-        done(session.user, profile)
+        if (cancelled) return
+        if (!session) { setUser(null); setAuthUser(null); setLoading(false); return }
+        await fetchAndSet(session)
       }
     )
 
-    // Also try getSession immediately
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('[useUser] getSession:', !!session, session?.user?.id)
-      if (cancelled || resolved || !session?.user) return
-      clearTimeout(timeout)
-      const profile = await fetchProfile(session.user.id, session.access_token)
-      done(session.user, profile)
+    // Also try immediately
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && !cancelled) {
+        clearTimeout(timeout)
+        fetchAndSet(session)
+      }
     })
 
     return () => { cancelled = true; clearTimeout(timeout); subscription.unsubscribe() }
