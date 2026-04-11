@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@/types'
 
@@ -7,50 +7,61 @@ export function useUser() {
   const [user, setUser] = useState<User | null>(null)
   const [authUser, setAuthUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const fetchedRef = useRef(false)
 
   useEffect(() => {
-    const supabase = createClient()
-    let cancelled = false
+    if (fetchedRef.current) return
+    fetchedRef.current = true
 
-    const fetchAndSet = async (session: any) => {
-      if (!session?.user || cancelled) return
+    const supabase = createClient()
+
+    const load = async () => {
       try {
-        setAuthUser(session.user)
-        const { data } = await supabase
-          .from('users').select('*').eq('id', session.user.id).single()
-        if (!cancelled) {
-          setUser(data ?? null)
+        // Get session
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!session?.user) {
           setLoading(false)
+          return
         }
-      } catch {
-        if (!cancelled) setLoading(false)
+
+        setAuthUser(session.user)
+
+        // Fetch profile with explicit auth header
+        const { data: profile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+
+        setUser(profile ?? null)
+      } catch (e) {
+        console.error('[useUser] error:', e)
+      } finally {
+        setLoading(false)
       }
     }
 
-    // Hard timeout
-    const timeout = setTimeout(() => {
-      if (!cancelled) setLoading(false)
-    }, 5000)
+    // Small delay to ensure supabase client has loaded session from storage
+    const t = setTimeout(load, 100)
 
-    // Listen FIRST before getSession
+    // Also listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        clearTimeout(timeout)
-        if (cancelled) return
-        if (!session) { setUser(null); setAuthUser(null); setLoading(false); return }
-        await fetchAndSet(session)
+        if (event === 'SIGNED_OUT') {
+          setUser(null); setAuthUser(null); setLoading(false)
+          return
+        }
+        if (event === 'SIGNED_IN' && session?.user && !user) {
+          setAuthUser(session.user)
+          const { data } = await supabase.from('users').select('*').eq('id', session.user.id).single()
+          setUser(data ?? null)
+          setLoading(false)
+        }
       }
     )
 
-    // Also try immediately
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && !cancelled) {
-        clearTimeout(timeout)
-        fetchAndSet(session)
-      }
-    })
-
-    return () => { cancelled = true; clearTimeout(timeout); subscription.unsubscribe() }
+    return () => { clearTimeout(t); subscription.unsubscribe() }
   }, [])
 
   const signOut = async () => {
