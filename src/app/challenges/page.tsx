@@ -337,7 +337,7 @@ export default function ChallengesPage() {
                 </div>
 
                 {/* Student image upload */}
-                <input ref={fileRef} type="file" accept="image/*" capture="screen" style={{ display:'none' }} onChange={handleImagePick} />
+                <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={handleImagePick} />
 
                 {!studentImage ? (
                   <button onClick={() => fileRef.current?.click()} disabled={uploading}
