@@ -6,66 +6,51 @@ import { useRouter } from 'next/navigation'
 
 type Period = 'weekly' | 'monthly' | 'all_time'
 
-// ═══════════════════════════════════════════════
-// DEMO USERS — Real Arabic names, realistic data
-// ═══════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// DEMO USERS — realistic Arabic names + deterministic XP
+// ══════════════════════════════════════════════════════
 const DEMO_USERS = [
-  { id: 'demo_1', name: 'محمد إبراهيم', avatar: '👨‍💻', base_weekly: 2400, base_monthly: 9800, base_all: 34200, city: 'القاهرة', seed: 7 },
-  { id: 'demo_2', name: 'أحمد خالد',    avatar: '🧑‍🎓', base_weekly: 2100, base_monthly: 8400, base_all: 28700, city: 'الإسكندرية', seed: 13 },
-  { id: 'demo_3', name: 'سارة محمود',  avatar: '👩‍💼', base_weekly: 1950, base_monthly: 7900, base_all: 25100, city: 'الجيزة', seed: 3 },
-  { id: 'demo_4', name: 'عمر حسين',    avatar: '👨‍🏫', base_weekly: 1800, base_monthly: 7200, base_all: 22800, city: 'الرياض', seed: 17 },
-  { id: 'demo_5', name: 'نور علي',      avatar: '👩‍🎨', base_weekly: 1650, base_monthly: 6600, base_all: 19500, city: 'دبي', seed: 5 },
-  { id: 'demo_6', name: 'يوسف عبدالله', avatar: '🧑‍💻', base_weekly: 1500, base_monthly: 6000, base_all: 17200, city: 'الكويت', seed: 11 },
-  { id: 'demo_7', name: 'مريم أحمد',   avatar: '👩‍🏫', base_weekly: 1350, base_monthly: 5400, base_all: 15600, city: 'القاهرة', seed: 9 },
-  { id: 'demo_8', name: 'علي محمد',    avatar: '👨‍🎓', base_weekly: 1200, base_monthly: 4800, base_all: 13400, city: 'الإسكندرية', seed: 2 },
-  { id: 'demo_9', name: 'فاطمة حسن',  avatar: '👩‍💻', base_weekly: 1050, base_monthly: 4200, base_all: 11800, city: 'جدة', seed: 15 },
-  { id: 'demo_10', name: 'كريم سامي',  avatar: '🧑‍🎨', base_weekly: 900,  base_monthly: 3600, base_all: 9900, city: 'عمان', seed: 6 },
-  { id: 'demo_11', name: 'هناء رضا',   avatar: '👩‍🎓', base_weekly: 750,  base_monthly: 3000, base_all: 8200, city: 'بيروت', seed: 19 },
-  { id: 'demo_12', name: 'طارق وليد',  avatar: '👨‍🎨', base_weekly: 600,  base_monthly: 2400, base_all: 6700, city: 'القاهرة', seed: 4 },
+  { id:'d1', name:'محمد إبراهيم',   avatar:'👨‍💻', w:2400, m:9800,  a:34200, streak_base:28, seed:7  },
+  { id:'d2', name:'أحمد خالد',      avatar:'🧑‍🎓', w:2100, m:8400,  a:28700, streak_base:21, seed:13 },
+  { id:'d3', name:'سارة محمود',    avatar:'👩‍💼', w:1950, m:7900,  a:25100, streak_base:35, seed:3  },
+  { id:'d4', name:'عمر حسين',      avatar:'👨‍🏫', w:1800, m:7200,  a:22800, streak_base:14, seed:17 },
+  { id:'d5', name:'نور علي',        avatar:'👩‍🎨', w:1650, m:6600,  a:19500, streak_base:9,  seed:5  },
+  { id:'d6', name:'يوسف عبدالله',  avatar:'🧑‍💻', w:1500, m:6000,  a:17200, streak_base:42, seed:11 },
+  { id:'d7', name:'مريم أحمد',     avatar:'👩‍🏫', w:1350, m:5400,  a:15600, streak_base:7,  seed:9  },
+  { id:'d8', name:'علي محمد',      avatar:'👨‍🎓', w:1200, m:4800,  a:13400, streak_base:16, seed:2  },
+  { id:'d9', name:'فاطمة حسن',    avatar:'👩‍💻', w:1050, m:4200,  a:11800, streak_base:5,  seed:15 },
+  { id:'d10',name:'كريم سامي',     avatar:'🧑‍🎨', w:900,  m:3600,  a:9900,  streak_base:11, seed:6  },
+  { id:'d11',name:'هناء رضا',      avatar:'👩‍🎓', w:750,  m:3000,  a:8200,  streak_base:3,  seed:19 },
+  { id:'d12',name:'طارق وليد',     avatar:'👨‍🎨', w:600,  m:2400,  a:6700,  streak_base:19, seed:4  },
 ]
 
-// Deterministic "random" based on seed + date
-// Same day = same result, different day = different result
-function deterministicRand(seed: number, dayOffset: number = 0): number {
-  const today = new Date()
-  const dayNum = Math.floor(today.getTime() / (1000 * 60 * 60 * 24)) + dayOffset
-  // LCG - looks random but is deterministic
-  const x = Math.sin(seed * 9301 + dayNum * 49297 + 233) * 10000
-  return x - Math.floor(x)
+// Deterministic daily variation ±15% — same day = same number, next day = different
+function dailyXP(base: number, seed: number): number {
+  const dayNum = Math.floor(Date.now() / 86400000)
+  const r = Math.abs(Math.sin(seed * 9301 + dayNum * 49297)) 
+  const variance = r * 0.3 - 0.15  // ±15%
+  return Math.round(base * (1 + variance) / 50) * 50  // round to nearest 50
 }
 
-// Generate XP that varies ±15% per day but stays realistic
-function getDailyXP(base: number, seed: number, type: Period): number {
-  const variance = deterministicRand(seed) * 0.3 - 0.15 // ±15%
-  const rawXP = Math.round(base * (1 + variance))
-  // Round to nearest 50 to look realistic
-  return Math.round(rawXP / 50) * 50
+function dailyStreak(base: number, seed: number): number {
+  const dayNum = Math.floor(Date.now() / 86400000)
+  const r = Math.abs(Math.sin(seed * 1234 + dayNum * 567))
+  return Math.max(1, base + Math.round(r * 4 - 2))  // ±2 days variation
 }
 
-// Generate streak that changes slowly (more realistic)
-function getDailyStreak(seed: number): number {
-  const today = new Date()
-  const dayNum = Math.floor(today.getTime() / (1000 * 60 * 60 * 24))
-  // Streak grows slowly, resets occasionally
-  const base = (seed * 7 + dayNum * 0.3) % 45
-  return Math.max(1, Math.round(base))
-}
-
-const RANK_EMOJI = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
-const MEDAL_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32']
+const RANK_EMOJI = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
 
 export default function LeaderboardPage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [period, setPeriod] = useState<Period>('weekly')
-  const [loading, setLoading] = useState(true)
+  const [user, setUser]       = useState<any>(null)
+  const [period, setPeriod]   = useState<Period>('weekly')
   const [entries, setEntries] = useState<any[]>([])
-  const [userRank, setUserRank] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const supabase = createClient()
     const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+      const { data:{ session } } = await supabase.auth.getSession()
       if (!session) { router.replace('/auth/login'); return }
       const { data: u } = await supabase.from('users').select('*').eq('id', session.user.id).single()
       setUser(u)
@@ -80,198 +65,205 @@ export default function LeaderboardPage() {
   }, [user, period])
 
   const buildLeaderboard = () => {
-    // Get user's real XP
-    const userXP = period === 'weekly'
-      ? Math.round((user.xp_total || 0) * 0.15) // Estimate weekly from total
-      : period === 'monthly'
-      ? Math.round((user.xp_total || 0) * 0.4)
-      : user.xp_total || 0
+    // ── Real user XP (always from actual DB) ──
+    const realXP =
+      period === 'weekly'   ? Math.round((user.xp_total || 0) * 0.15) :
+      period === 'monthly'  ? Math.round((user.xp_total || 0) * 0.40) :
+                              (user.xp_total || 0)
 
-    // Build demo entries with daily-varying XP
-    const demoEntries = DEMO_USERS.map((u, i) => {
-      const baseKey = period === 'weekly' ? 'base_weekly' : period === 'monthly' ? 'base_monthly' : 'base_all'
-      const xp = getDailyXP(u[baseKey as keyof typeof u] as number, u.seed, period)
-      return {
-        id: u.id,
-        name: u.name,
-        avatar: u.avatar,
-        xp,
-        streak: getDailyStreak(u.seed),
-        isDemo: true,
-        city: u.city,
-      }
-    })
-
-    // Add real user
-    const realUser: any = {
-      id: user.id,
-      name: user.full_name || user.username || 'أنت',
+    const realEntry: any = {
+      id:     user.id,
+      name:   user.full_name || user.username || 'أنت',
       avatar: '⭐',
-      xp: userXP,
+      xp:     realXP,
       streak: user.streak_current || 0,
-      isDemo: false,
-      isMe: true,
+      level:  user.current_level || 1,
+      isMe:   true,
     }
 
-    // Combine + sort by XP
-    const all: any[] = [...demoEntries, realUser].sort((a, b) => b.xp - a.xp)
+    // ── Demo users with daily-varying XP ──
+    const demoEntries = DEMO_USERS.map(u => ({
+      id:     u.id,
+      name:   u.name,
+      avatar: u.avatar,
+      xp:     dailyXP(period === 'weekly' ? u.w : period === 'monthly' ? u.m : u.a, u.seed),
+      streak: dailyStreak(u.streak_base, u.seed),
+      level:  Math.floor(dailyXP(u.a, u.seed) / 2500) + 1,
+      isMe:   false,
+    }))
 
-    // Find user rank
-    const rank = all.findIndex((e: any) => e.isMe) + 1
-    setUserRank(rank)
-    setEntries(all)
+    // ── Sort by XP ──
+    const sorted = [...demoEntries, realEntry].sort((a, b) => b.xp - a.xp)
+    setEntries(sorted)
   }
 
-  if (loading || !user) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <span style={{ fontSize:48 }}>🏆</span>
+  if (loading) return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#f7f7f7'}}>
+      <span style={{fontSize:48}}>🏆</span>
     </div>
   )
 
-  const myEntry = entries.find((e: any) => e.isMe)
-  const top3 = entries.slice(0, 3)
-  const rest = entries.slice(3)
+  const myRank  = entries.findIndex((e:any) => e.isMe) + 1
+  const myEntry = entries.find((e:any) => e.isMe)
+  const top3    = entries.slice(0, 3)
+  const belowTop3 = entries.slice(3)
+
+  // Gap to next rank
+  const xpToNextRank = myRank > 1
+    ? entries[myRank - 2].xp - myEntry.xp
+    : 0
 
   return (
-    <div dir="rtl" style={{ maxWidth:480, margin:'0 auto', minHeight:'100vh', background:'#f7f7f7', fontFamily:"'Segoe UI',Tahoma,sans-serif", paddingBottom:90 }}>
+    <div dir="rtl" style={{maxWidth:480, margin:'0 auto', minHeight:'100vh', background:'#f7f7f7', fontFamily:"'Segoe UI',Tahoma,sans-serif", paddingBottom:90}}>
 
       {/* Header */}
-      <div style={{ background:'linear-gradient(135deg, #1CB0F6 0%, #0090CC 100%)', padding:'20px 16px 24px' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-          <h1 style={{ margin:0, fontSize:22, fontWeight:900, color:'#fff' }}>🏆 الترتيب</h1>
-          {userRank && (
-            <div style={{ background:'rgba(255,255,255,0.2)', borderRadius:99, padding:'5px 14px' }}>
-              <span style={{ color:'#fff', fontSize:14, fontWeight:800 }}>
-                ترتيبك: <span style={{ color:'#FFD700' }}>#{userRank}</span>
+      <div style={{background:'linear-gradient(135deg,#1CB0F6 0%,#0090CC 100%)', padding:'20px 16px 28px'}}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
+          <h1 style={{margin:0, fontSize:22, fontWeight:900, color:'#fff'}}>🏆 الترتيب</h1>
+          {myRank > 0 && (
+            <div style={{background:'rgba(255,255,255,0.2)', borderRadius:99, padding:'5px 14px'}}>
+              <span style={{color:'#fff', fontSize:14, fontWeight:800}}>
+                ترتيبك: <span style={{color:'#FFD700'}}>#{myRank}</span>
               </span>
             </div>
           )}
         </div>
 
         {/* Period Tabs */}
-        <div style={{ display:'flex', background:'rgba(0,0,0,0.2)', borderRadius:12, padding:3, gap:2 }}>
-          {([['weekly','هذا الأسبوع'],['monthly','هذا الشهر'],['all_time','كل الوقت']] as [Period,string][]).map(([p, label]) => (
+        <div style={{display:'flex', background:'rgba(0,0,0,0.2)', borderRadius:12, padding:3, gap:2}}>
+          {([['weekly','هذا الأسبوع'],['monthly','هذا الشهر'],['all_time','كل الوقت']] as [Period,string][]).map(([p,label]) => (
             <button key={p} onClick={() => setPeriod(p)}
-              style={{ flex:1, padding:'8px 4px', borderRadius:10, border:'none', background: period===p ? '#fff' : 'transparent', color: period===p ? '#1CB0F6' : 'rgba(255,255,255,0.7)', fontWeight: period===p ? 800 : 400, cursor:'pointer', fontSize:12 }}>
+              style={{flex:1, padding:'8px 4px', borderRadius:10, border:'none', background:period===p?'#fff':'transparent', color:period===p?'#1CB0F6':'rgba(255,255,255,0.7)', fontWeight:period===p?800:400, cursor:'pointer', fontSize:12, transition:'all 0.2s'}}>
               {label}
             </button>
           ))}
         </div>
       </div>
 
-      <div style={{ padding:'0 16px 16px' }}>
+      <div style={{padding:'0 16px 16px'}}>
 
-        {/* Top 3 Podium */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1.2fr 1fr', gap:8, margin:'20px 0 16px', alignItems:'flex-end' }}>
-          {/* 2nd place */}
+        {/* ── Podium Top 3 ── */}
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1.15fr 1fr', gap:8, margin:'20px 0 16px', alignItems:'flex-end'}}>
+          {/* 2nd */}
           {top3[1] && (
-            <div style={{ textAlign:'center' }}>
-              <div style={{ fontSize:32, marginBottom:4 }}>{top3[1].isMe ? '⭐' : top3[1].avatar}</div>
-              <div style={{ fontSize:12, fontWeight:700, color:'#333', marginBottom:4 }}>{top3[1].name}</div>
-              <div style={{ background:'#C0C0C0', borderRadius:'10px 10px 0 0', padding:'10px 4px' }}>
-                <div style={{ fontSize:10, color:'#fff' }}>🥈</div>
-                <div style={{ fontSize:13, fontWeight:900, color:'#fff' }}>{top3[1].xp.toLocaleString()}</div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)' }}>XP</div>
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:30, marginBottom:4}}>{top3[1].isMe ? '⭐' : top3[1].avatar}</div>
+              <div style={{fontSize:11, fontWeight:700, color:'#333', marginBottom:4, lineHeight:1.2}}>{top3[1].name}</div>
+              <div style={{background:'#C0C0C0', borderRadius:'10px 10px 0 0', padding:'10px 4px'}}>
+                <div style={{fontSize:16}}>🥈</div>
+                <div style={{fontSize:13, fontWeight:900, color:'#fff'}}>{top3[1].xp.toLocaleString()}</div>
+                <div style={{fontSize:9, color:'rgba(255,255,255,0.8)'}}>XP</div>
+                {top3[1].isMe && <div style={{fontSize:9, color:'#FFD700', fontWeight:800}}>أنت!</div>}
               </div>
             </div>
           )}
-          {/* 1st place */}
+          {/* 1st */}
           {top3[0] && (
-            <div style={{ textAlign:'center' }}>
-              <div style={{ fontSize:16, marginBottom:4 }}>👑</div>
-              <div style={{ fontSize:36, marginBottom:4 }}>{top3[0].isMe ? '⭐' : top3[0].avatar}</div>
-              <div style={{ fontSize:13, fontWeight:800, color:'#333', marginBottom:4 }}>{top3[0].name}</div>
-              <div style={{ background:'#FFD700', borderRadius:'10px 10px 0 0', padding:'14px 4px' }}>
-                <div style={{ fontSize:10, color:'#fff' }}>🥇</div>
-                <div style={{ fontSize:15, fontWeight:900, color:'#fff' }}>{top3[0].xp.toLocaleString()}</div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)' }}>XP</div>
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:14, marginBottom:2}}>👑</div>
+              <div style={{fontSize:34, marginBottom:4}}>{top3[0].isMe ? '⭐' : top3[0].avatar}</div>
+              <div style={{fontSize:12, fontWeight:800, color:'#333', marginBottom:4, lineHeight:1.2}}>{top3[0].name}</div>
+              <div style={{background:'#FFD700', borderRadius:'10px 10px 0 0', padding:'14px 4px'}}>
+                <div style={{fontSize:18}}>🥇</div>
+                <div style={{fontSize:15, fontWeight:900, color:'#fff'}}>{top3[0].xp.toLocaleString()}</div>
+                <div style={{fontSize:9, color:'rgba(255,255,255,0.8)'}}>XP</div>
+                {top3[0].isMe && <div style={{fontSize:9, color:'#333', fontWeight:800}}>أنت!</div>}
               </div>
             </div>
           )}
-          {/* 3rd place */}
+          {/* 3rd */}
           {top3[2] && (
-            <div style={{ textAlign:'center' }}>
-              <div style={{ fontSize:32, marginBottom:4 }}>{top3[2].isMe ? '⭐' : top3[2].avatar}</div>
-              <div style={{ fontSize:12, fontWeight:700, color:'#333', marginBottom:4 }}>{top3[2].name}</div>
-              <div style={{ background:'#CD7F32', borderRadius:'10px 10px 0 0', padding:'8px 4px' }}>
-                <div style={{ fontSize:10, color:'#fff' }}>🥉</div>
-                <div style={{ fontSize:13, fontWeight:900, color:'#fff' }}>{top3[2].xp.toLocaleString()}</div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)' }}>XP</div>
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:28, marginBottom:4}}>{top3[2].isMe ? '⭐' : top3[2].avatar}</div>
+              <div style={{fontSize:11, fontWeight:700, color:'#333', marginBottom:4, lineHeight:1.2}}>{top3[2].name}</div>
+              <div style={{background:'#CD7F32', borderRadius:'10px 10px 0 0', padding:'8px 4px'}}>
+                <div style={{fontSize:14}}>🥉</div>
+                <div style={{fontSize:13, fontWeight:900, color:'#fff'}}>{top3[2].xp.toLocaleString()}</div>
+                <div style={{fontSize:9, color:'rgba(255,255,255,0.8)'}}>XP</div>
+                {top3[2].isMe && <div style={{fontSize:9, color:'#FFD700', fontWeight:800}}>أنت!</div>}
               </div>
             </div>
           )}
         </div>
 
-        {/* Rest of leaderboard */}
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          {entries.map((entry, i) => {
-            const rank = i + 1
-            if (rank <= 3) return null // Already shown in podium
+        {/* ── Rest of list ── */}
+        <div style={{display:'flex', flexDirection:'column', gap:8}}>
+          {belowTop3.map((entry:any, i:number) => {
+            const rank = i + 4
             const isMe = entry.isMe
-
             return (
               <div key={entry.id} style={{
                 background: isMe ? '#DDF4FF' : '#fff',
                 borderRadius:14, padding:'12px 14px',
                 border: isMe ? '2px solid #1CB0F6' : '2px solid #f0f0f0',
                 display:'flex', alignItems:'center', gap:12,
-                boxShadow: isMe ? '0 2px 12px rgba(28,176,246,0.2)' : 'none',
+                boxShadow: isMe ? '0 2px 12px rgba(28,176,246,0.15)' : 'none',
               }}>
-                {/* Rank */}
-                <div style={{ width:32, textAlign:'center', flexShrink:0 }}>
-                  <span style={{ fontSize:rank <= 10 ? 18 : 14, fontWeight:800, color: isMe ? '#1CB0F6' : '#999' }}>
-                    {rank <= 10 ? RANK_EMOJI[rank - 1] : `#${rank}`}
+                <div style={{width:30, textAlign:'center', flexShrink:0}}>
+                  <span style={{fontSize:rank<=10?16:13, fontWeight:800, color:isMe?'#1CB0F6':'#aaa'}}>
+                    {rank <= 10 ? RANK_EMOJI[rank-1] : `#${rank}`}
                   </span>
                 </div>
-                {/* Avatar */}
-                <div style={{ width:40, height:40, borderRadius:12, background: isMe ? '#1CB0F620' : '#f5f5f5', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>
+                <div style={{width:40, height:40, borderRadius:12, background:isMe?'#DDF4FF':'#f5f5f5', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0, border:isMe?'2px solid #1CB0F6':'none'}}>
                   {entry.avatar}
                 </div>
-                {/* Info */}
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, color: isMe ? '#1453A3' : '#333', fontSize:14 }}>
-                    {entry.name} {isMe && <span style={{ fontSize:11, color:'#1CB0F6', fontWeight:700 }}>(أنت)</span>}
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700, color:isMe?'#1453A3':'#333', fontSize:14}}>
+                    {entry.name}
+                    {isMe && <span style={{fontSize:11, color:'#1CB0F6', fontWeight:700, marginRight:4}}> (أنت)</span>}
                   </div>
-                  <div style={{ fontSize:11, color:'#999', marginTop:2 }}>
-                    🔥 {entry.streak} يوم متواصل
+                  <div style={{fontSize:11, color:'#aaa', marginTop:2}}>
+                    🔥 {entry.streak} يوم · Lv.{entry.level}
                   </div>
                 </div>
-                {/* XP */}
-                <div style={{ textAlign:'left', flexShrink:0 }}>
-                  <div style={{ fontWeight:900, color: isMe ? '#1CB0F6' : '#333', fontSize:15 }}>{entry.xp.toLocaleString()}</div>
-                  <div style={{ fontSize:10, color:'#aaa', textAlign:'center' }}>XP</div>
+                <div style={{textAlign:'left', flexShrink:0}}>
+                  <div style={{fontWeight:900, color:isMe?'#1CB0F6':'#333', fontSize:15}}>{entry.xp.toLocaleString()}</div>
+                  <div style={{fontSize:10, color:'#ccc', textAlign:'center'}}>XP</div>
                 </div>
               </div>
             )
           })}
         </div>
 
-        {/* Motivational message */}
-        {userRank && userRank > 1 && (
-          <div style={{ background:'#FFF5D3', borderRadius:14, padding:'14px 16px', marginTop:16, border:'2px solid #FF9600', textAlign:'center' }}>
-            <div style={{ fontSize:14, fontWeight:700, color:'#A56644' }}>
-              {userRank <= 5
-                ? `🔥 أنت في المراكز الأولى! فرقك عن #${userRank-1} ${(entries[userRank-2]?.xp - entries[userRank-1]?.xp).toLocaleString()} XP فقط`
-                : `💪 اكمل ${Math.round((entries[userRank-2]?.xp - entries[userRank-1]?.xp + 100))} XP أكتر عشان تتقدم مرتبة`
+        {/* ── Motivational message for real user ── */}
+        {myRank > 0 && myEntry && (
+          <div style={{
+            background: myRank === 1 ? '#D7FFB8' : myRank <= 3 ? '#FFF5D3' : '#DDF4FF',
+            borderRadius:14, padding:'14px 16px', marginTop:16,
+            border:`2px solid ${myRank===1?'#58CC02':myRank<=3?'#FF9600':'#1CB0F6'}`,
+            textAlign:'center'
+          }}>
+            <div style={{fontSize:20, marginBottom:4}}>
+              {myRank===1?'🏆':myRank<=3?'🔥':myRank<=5?'💪':'📈'}
+            </div>
+            <div style={{fontSize:14, fontWeight:700, color:myRank===1?'#27500A':myRank<=3?'#A56644':'#1453A3'}}>
+              {myRank === 1
+                ? '🎉 أنت في المرتبة الأولى! استمر!'
+                : myRank <= 3
+                ? `🔥 أنت في المراكز الأولى! فرقك عن #${myRank-1} فقط ${xpToNextRank.toLocaleString()} XP`
+                : `💪 اكسب ${xpToNextRank.toLocaleString()} XP أكتر عشان تتقدم للمرتبة #${myRank-1}`
               }
+            </div>
+            <div style={{fontSize:12, color:'#666', marginTop:4}}>
+              بياناتك حقيقية — XP: {myEntry.xp.toLocaleString()} · Streak: {myEntry.streak} يوم
             </div>
           </div>
         )}
       </div>
 
       {/* Bottom Nav */}
-      <nav style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'#fff', borderTop:'2px solid #f0f0f0', display:'flex', padding:'8px 0 16px', zIndex:100, direction:'ltr' }}>
+      <nav style={{position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'#fff', borderTop:'2px solid #f0f0f0', display:'flex', padding:'8px 0 16px', zIndex:100, direction:'ltr'}}>
         {[
-          { href:'/profile',     icon:'👤', label:'ملفي' },
-          { href:'/leaderboard', icon:'🏆', label:'الترتيب', active:true },
-          { href:'/challenges',  icon:'⚔️',  label:'التحديات' },
-          { href:'/learn',       icon:'📚', label:'التعلم' },
-          { href:'/home',        icon:'🏠', label:'الرئيسية' },
+          {href:'/profile',     icon:'👤', label:'ملفي'     },
+          {href:'/leaderboard', icon:'🏆', label:'الترتيب', active:true},
+          {href:'/challenges',  icon:'⚔️',  label:'التحديات'},
+          {href:'/learn',       icon:'📚', label:'التعلم'   },
+          {href:'/home',        icon:'🏠', label:'الرئيسية' },
         ].map(n => (
-          <Link key={n.href} href={n.href} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, textDecoration:'none', padding:'4px 0', position:'relative' }}>
-            {(n as any).active && <div style={{ position:'absolute', top:-8, left:'50%', transform:'translateX(-50%)', width:32, height:3, borderRadius:99, background:'#1CB0F6' }}/>}
-            <span style={{ fontSize:22 }}>{n.icon}</span>
-            <span style={{ fontSize:10, fontWeight:(n as any).active ? 800 : 400, color:(n as any).active ? '#1CB0F6' : '#aaa' }}>{n.label}</span>
+          <Link key={n.href} href={n.href} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, textDecoration:'none', padding:'4px 0', position:'relative'}}>
+            {(n as any).active && <div style={{position:'absolute', top:-8, left:'50%', transform:'translateX(-50%)', width:32, height:3, borderRadius:99, background:'#1CB0F6'}}/>}
+            <span style={{fontSize:22}}>{n.icon}</span>
+            <span style={{fontSize:10, fontWeight:(n as any).active?800:400, color:(n as any).active?'#1CB0F6':'#aaa'}}>{n.label}</span>
           </Link>
         ))}
       </nav>
