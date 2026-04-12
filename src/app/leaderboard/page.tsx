@@ -103,7 +103,7 @@ export default function LeaderboardPage() {
     })
 
     // Add real user
-    const realUser = {
+    const realUser: any = {
       id: user.id,
       name: user.full_name || user.username || 'أنت',
       avatar: '⭐',
@@ -114,10 +114,10 @@ export default function LeaderboardPage() {
     }
 
     // Combine + sort by XP
-    const all = [...demoEntries, realUser].sort((a, b) => b.xp - a.xp)
+    const all: any[] = [...demoEntries, realUser].sort((a, b) => b.xp - a.xp)
 
     // Find user rank
-    const rank = all.findIndex(e => e.isMe) + 1
+    const rank = all.findIndex((e: any) => e.isMe) + 1
     setUserRank(rank)
     setEntries(all)
   }
@@ -128,7 +128,7 @@ export default function LeaderboardPage() {
     </div>
   )
 
-  const myEntry = entries.find(e => e.isMe)
+  const myEntry = entries.find((e: any) => e.isMe)
   const top3 = entries.slice(0, 3)
   const rest = entries.slice(3)
 
