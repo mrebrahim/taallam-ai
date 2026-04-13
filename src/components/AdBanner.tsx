@@ -94,14 +94,14 @@ export default function AdBanner({ userId, enrolledRoadmapSlugs, placement = 'ho
     }, { onConflict: 'user_id,ad_id' })
 
     // Increment view count
-    await supabase.rpc('increment_ad_views', { ad_id: toShow.id }).catch(() => {})
+    try { await supabase.rpc("increment_ad_views", { ad_id: toShow.id }) } catch {}
   }
 
   const handleClick = async () => {
     if (!ad) return
     const supabase = createClient()
     await supabase.from('ad_views').update({ clicked: true }).eq('user_id', userId).eq('ad_id', ad.id)
-    await supabase.rpc('increment_ad_clicks', { ad_id: ad.id }).catch(() => {})
+    try { await supabase.rpc('increment_ad_clicks', { ad_id: ad.id }) } catch {}
     if (ad.cta_url) window.open(ad.cta_url, '_blank')
   }
 
