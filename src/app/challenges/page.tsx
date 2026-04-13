@@ -1,4 +1,5 @@
 'use client'
+import QuizSession from '@/components/QuizSession'
 import CelebrationScreen from '@/components/CelebrationScreen'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -23,6 +24,7 @@ export default function ChallengesPage() {
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading]   = useState(true)
   const [showCelebration, setShowCelebration] = useState(false)
+  const [quizMode, setQuizMode] = useState(false)
   const [celebrationXP, setCelebrationXP] = useState(0)
 
   useEffect(() => {
@@ -157,10 +159,44 @@ export default function ChallengesPage() {
       )}
 
       {/* Header */}
+      {/* Quiz Session Mode */}
+      {quizMode && challenges.length > 0 && (
+        <QuizSession
+          questions={challenges.map(ch => ({
+            id: ch.id,
+            title_ar: ch.title_ar,
+            question_ar: ch.question_ar,
+            options: ch.options || [],
+            correct_answer: ch.correct_answer,
+            explanation_ar: ch.explanation_ar,
+            xp_reward: ch.xp_reward,
+            difficulty: ch.difficulty,
+          }))}
+          onComplete={({ correct, total, xpEarned }) => {
+            setQuizMode(false)
+            // Reload attempts
+            const supabase = createClient()
+            supabase.from('user_challenge_attempts').select('*').eq('user_id', user?.id).then(({ data }) => {
+              const m: Record<string, any> = {}
+              data?.forEach((a: any) => { m[a.challenge_id] = a })
+              setAttempts(m)
+            })
+          }}
+          onExit={() => setQuizMode(false)}
+        />
+      )}
+
       <header style={{background:'#fff',padding:'14px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'2px solid #f0f0f0',position:'sticky',top:0,zIndex:50}}>
         <h1 style={{margin:0,fontSize:20,fontWeight:900,color:'#333'}}>⚔️ التحديات</h1>
-        <div style={{background:'#D7FFB8',borderRadius:99,padding:'5px 14px',fontSize:13,fontWeight:800,color:'#27500A'}}>
-          {completed}/{challenges.length} ✅
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          {challenges.filter(ch => ch.challenge_type === 'complete_sentence' || ch.challenge_type === 'multiple_choice').length > 0 && (
+            <button onClick={() => setQuizMode(true)} style={{background:'#1CB0F6',borderRadius:99,padding:'6px 14px',fontSize:12,fontWeight:800,color:'#fff',border:'none',cursor:'pointer'}}>
+              🚀 جلسة كاملة
+            </button>
+          )}
+          <div style={{background:'#D7FFB8',borderRadius:99,padding:'5px 14px',fontSize:13,fontWeight:800,color:'#27500A'}}>
+            {completed}/{challenges.length} ✅
+          </div>
         </div>
       </header>
 
