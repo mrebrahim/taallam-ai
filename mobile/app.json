@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "scheme": "taallam",
     "splash": {
       "image": "./assets/splash.png",
@@ -17,6 +17,8 @@
       "bundleIdentifier": "com.ibrahimschool.taallam",
       "buildNumber": "1",
       "infoPlist": {
+        "NSCameraUsageDescription": "عشان ترفع screenshots للتحديات",
+        "NSPhotoLibraryUsageDescription": "عشان ترفع صور للتحديات",
         "NSUserNotificationUsageDescription": "عشان نبعتلك تذكير بدرسك اليومي وتحافظ على الـ streak"
       }
     },
@@ -27,29 +29,37 @@
       },
       "package": "com.ibrahimschool.taallam",
       "versionCode": 1,
-      "permissions": []
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
     },
     "plugins": [
       "expo-router",
       "expo-screen-capture",
       [
-        "expo-av",
-        {
-          "microphonePermission": false
-        }
-      ],
-      [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
           "color": "#58CC02",
-          "sounds": [],
           "androidMode": "default"
         }
+      ],
+      [
+        "expo-av",
+        { "microphonePermission": false }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-expo-project-id"
+      }
     }
   }
 }

@@ -1,0 +1,115 @@
+workflows:
+
+  # ══════════════════════════════════
+  # Android APK (للتوزيع المباشر)
+  # ══════════════════════════════════
+  android-apk:
+    name: Android APK (Preview)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+        # EXPO_PUBLIC_SUPABASE_ANON_KEY: مضاف من Codemagic secrets
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd mobile
+          npm install
+
+      - name: Build Android APK with Expo
+        script: |
+          cd mobile
+          npx expo export --platform android
+          # OR use EAS if configured:
+          # npx eas build --platform android --profile preview --non-interactive
+
+    artifacts:
+      - mobile/android/app/build/outputs/**/*.apk
+      - mobile/build/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - ibrahim@n8nar.com
+        notify:
+          success: true
+          failure: true
+
+  # ══════════════════════════════════
+  # Android Production (Google Play)
+  # ══════════════════════════════════
+  android-production:
+    name: Android — Google Play
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      android_signing:
+        - taallam_keystore  # اسم الـ keystore في Codemagic
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd mobile && npm install
+
+      - name: Build Android AAB
+        script: |
+          cd mobile
+          npx eas build --platform android --profile production --non-interactive
+
+    artifacts:
+      - mobile/**/*.aab
+
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal  # internal → alpha → beta → production
+      email:
+        recipients:
+          - ibrahim@n8nar.com
+
+  # ══════════════════════════════════
+  # iOS Production (App Store)
+  # ══════════════════════════════════
+  ios-production:
+    name: iOS — App Store
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.ibrahimschool.taallam
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd mobile && npm install
+
+      - name: Build iOS IPA
+        script: |
+          cd mobile
+          npx eas build --platform ios --profile production --non-interactive
+
+    artifacts:
+      - mobile/**/*.ipa
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+      email:
+        recipients:
+          - ibrahim@n8nar.com
