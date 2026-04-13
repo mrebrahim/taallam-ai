@@ -1,0 +1,132 @@
+workflows:
+
+  # ══════════════════════════════════
+  # Android APK — للتوزيع المباشر
+  # ══════════════════════════════════
+  android-apk:
+    name: Android APK (Preview)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+      groups:
+        - taallam_secrets  # EXPO_PUBLIC_SUPABASE_ANON_KEY هتضيفه هنا
+
+    scripts:
+      - name: Set up Node and Expo
+        script: |
+          npm install -g expo-cli eas-cli
+
+      - name: Install dependencies
+        script: |
+          cd mobile
+          npm install
+
+      - name: Build Android APK
+        script: |
+          cd mobile
+          npx expo export:embed --platform android --output-dir ./dist || true
+          eas build --platform android --profile preview --non-interactive --no-wait || \
+          npx expo build:android -t apk --non-interactive
+
+    artifacts:
+      - mobile/dist/**
+      - "**/*.apk"
+
+    publishing:
+      email:
+        recipients:
+          - ebrahimkhlil01@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  # ══════════════════════════════════  
+  # Android Production — Google Play
+  # ══════════════════════════════════
+  android-production:
+    name: Android — Google Play (AAB)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      android_signing:
+        - taallam_keystore
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+      groups:
+        - taallam_secrets
+
+    scripts:
+      - name: Install tools
+        script: npm install -g expo-cli eas-cli
+
+      - name: Install dependencies
+        script: |
+          cd mobile
+          npm install
+
+      - name: Build AAB for Google Play
+        script: |
+          cd mobile
+          eas build --platform android --profile production --non-interactive
+
+    artifacts:
+      - "**/*.aab"
+
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+      email:
+        recipients:
+          - ebrahimkhlil01@gmail.com
+
+  # ══════════════════════════════════
+  # iOS — App Store
+  # ══════════════════════════════════
+  ios-production:
+    name: iOS — App Store
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.ibrahimschool.taallam
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+      groups:
+        - taallam_secrets
+
+    scripts:
+      - name: Install tools
+        script: npm install -g expo-cli eas-cli
+
+      - name: Install dependencies
+        script: |
+          cd mobile
+          npm install
+
+      - name: Build iOS IPA
+        script: |
+          cd mobile
+          eas build --platform ios --profile production --non-interactive
+
+    artifacts:
+      - "**/*.ipa"
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+      email:
+        recipients:
+          - ebrahimkhlil01@gmail.com
