@@ -231,83 +231,122 @@ export default function ChallengesPage() {
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.72)',display:'flex',alignItems:'flex-end',justifyContent:'center',zIndex:200}}>
           <div style={{background:'#fff',borderRadius:'24px 24px 0 0',width:'100%',maxWidth:480,maxHeight:'93vh',overflowY:'auto',padding:'24px 20px 40px'}} dir="rtl">
 
-            {/* ── RESULT SCREEN ── */}
+            {/* ── RESULT SCREEN — Duolingo XP Lightning Style ── */}
             {step === 'result' && result && (
-              <div style={{textAlign:'center'}}>
-                {/* Big result animation */}
-                <div style={{
-                  width:100,height:100,borderRadius:'50%',
-                  background: result.is_correct ? 'linear-gradient(135deg,#58CC02,#a0e040)' : 'linear-gradient(135deg,#FF4B4B,#FF8C00)',
-                  display:'flex',alignItems:'center',justifyContent:'center',
-                  fontSize:48,margin:'0 auto 16px',
-                  boxShadow: result.is_correct ? '0 8px 32px #58CC0240' : '0 8px 32px #FF4B4B40',
-                }}>
-                  {result.is_correct ? '🎉' : '😔'}
-                </div>
+              <div>
+                {result.is_correct ? (
+                  /* ═══════ SUCCESS SCREEN ═══════ */
+                  <div style={{background:'#1a1a2e',borderRadius:20,margin:'-24px -20px -40px',padding:'32px 24px 40px',minHeight:400,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative',overflow:'hidden'}}>
 
-                <h2 style={{margin:'0 0 4px',fontSize:26,fontWeight:900,color:result.is_correct?'#58CC02':'#FF4B4B'}}>
-                  {result.is_correct ? 'إجابة صحيحة!' : 'إجابة خاطئة'}
-                </h2>
-                <p style={{margin:'0 0 20px',fontSize:14,color:'#999'}}>
-                  {result.is_correct ? `حصلت على +${active.xp_reward} XP! 🎊` : 'لا تستسلم — حاول مرة أخرى!'}
-                </p>
-
-                {/* XP gained badge */}
-                {result.is_correct && (
-                  <div style={{display:'inline-flex',alignItems:'center',gap:8,background:'#FFF5D3',borderRadius:12,padding:'10px 20px',marginBottom:20,border:'2px solid #FF9600'}}>
-                    <span style={{fontSize:24}}>⚡</span>
-                    <span style={{fontSize:20,fontWeight:900,color:'#FF9600'}}>+{active.xp_reward} XP</span>
-                  </div>
-                )}
-
-                {/* MCQ options result */}
-                {(active.challenge_type==='complete_sentence'||active.challenge_type==='multiple_choice') && (
-                  <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:16,textAlign:'right'}}>
-                    {(active.options||[]).map((opt:string,i:number)=>{
-                      const isCorrect = i===active.correct_answer
-                      const isSelected = i===selectedOption
-                      return (
-                        <div key={i} style={{padding:'12px 14px',borderRadius:12,border:`2px solid ${isCorrect?'#58CC02':isSelected&&!isCorrect?'#FF4B4B':'#f0f0f0'}`,background:isCorrect?'#D7FFB8':isSelected&&!isCorrect?'#FFE5E5':'#f9f9f9',display:'flex',alignItems:'center',gap:10}}>
-                          <span style={{width:28,height:28,borderRadius:8,background:isCorrect?'#58CC02':isSelected&&!isCorrect?'#FF4B4B':'#f0f0f0',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,flexShrink:0}}>
-                            {isCorrect?'✓':isSelected&&!isCorrect?'✗':['أ','ب','ج','د'][i]}
-                          </span>
-                          <span style={{fontSize:14,fontWeight:isCorrect?700:400,color:isCorrect?'#27500A':isSelected&&!isCorrect?'#7f1d1d':'#555'}}>{opt}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {/* AI Feedback card */}
-                {result.feedback_ar && (
-                  <div style={{background:result.is_correct?'#D7FFB8':'#FFF3E0',borderRadius:14,padding:'14px 16px',marginBottom:12,border:`2px solid ${result.is_correct?'#58CC02':'#FF9600'}`,textAlign:'right'}}>
-                    <div style={{fontSize:13,fontWeight:700,color:'#999',marginBottom:4}}>
-                      {result.is_correct ? '💡 شرح الإجابة:' : '🔍 التصحيح:'}
+                    {/* Lightning bolts background */}
+                    <div style={{position:'absolute',inset:0,pointerEvents:'none'}}>
+                      {/* Left lightning */}
+                      <svg style={{position:'absolute',left:-20,top:0,opacity:0.3}} width="120" height="400" viewBox="0 0 120 400">
+                        <polyline points="80,0 40,150 70,150 20,400" stroke="#FFD700" strokeWidth="12" fill="none" strokeLinejoin="round"/>
+                      </svg>
+                      {/* Right lightning */}
+                      <svg style={{position:'absolute',right:-20,top:0,opacity:0.3}} width="120" height="400" viewBox="0 0 120 400">
+                        <polyline points="40,0 80,150 50,150 100,400" stroke="#FFD700" strokeWidth="12" fill="none" strokeLinejoin="round"/>
+                      </svg>
                     </div>
-                    <div style={{fontSize:14,color:'#444',lineHeight:1.7}}>{result.feedback_ar}</div>
-                  </div>
-                )}
 
-                {/* Explanation */}
-                {result.correct_explanation_ar && result.correct_explanation_ar !== result.feedback_ar && (
-                  <div style={{background:'#f7f7f7',borderRadius:12,padding:'12px 14px',marginBottom:16,textAlign:'right'}}>
-                    <div style={{fontSize:12,fontWeight:700,color:'#aaa',marginBottom:4}}>📖 معلومة إضافية:</div>
-                    <div style={{fontSize:13,color:'#666',lineHeight:1.7}}>{result.correct_explanation_ar}</div>
-                  </div>
-                )}
+                    {/* Stars */}
+                    {['20%,15%','75%,10%','10%,45%','85%,40%','50%,8%'].map((pos,i)=>(
+                      <div key={i} style={{position:'absolute',left:pos.split(',')[0],top:pos.split(',')[1],fontSize:i%2===0?16:12,animation:`twinkle ${1+i*0.3}s ease-in-out infinite alternate`}}>⭐</div>
+                    ))}
 
-                {/* Action buttons */}
-                <div style={{display:'flex',gap:10}}>
-                  {!result.is_correct && (
-                    <button onClick={()=>{setStep('mcq');setSelectedOption(null);setResult(null)}} style={{flex:1,padding:'14px',borderRadius:14,border:'2px solid #1CB0F6',background:'transparent',color:'#1CB0F6',fontWeight:800,fontSize:14,cursor:'pointer'}}>
-                      🔄 حاول مرة أخرى
+                    {/* Nar mascot holding XP cup */}
+                    <div style={{fontSize:80,marginBottom:8,filter:'drop-shadow(0 0 20px #58CC02)'}}>🤖</div>
+
+                    {/* XP Cup — the KEY element */}
+                    <div style={{
+                      background:'linear-gradient(135deg,#FF9600,#FFD700)',
+                      borderRadius:20,padding:'16px 32px',marginBottom:16,
+                      boxShadow:'0 8px 32px #FF960060, 0 0 60px #FFD70040',
+                      border:'3px solid #FFD700',
+                      display:'flex',alignItems:'center',gap:12,
+                      animation:'xpPulse 0.6s ease-out',
+                    }}>
+                      <span style={{fontSize:36}}>⚡</span>
+                      <span style={{fontSize:48,fontWeight:900,color:'#fff',textShadow:'0 2px 8px rgba(0,0,0,0.3)'}}>+{active.xp_reward}</span>
+                      <div>
+                        <div style={{fontSize:16,fontWeight:900,color:'#fff'}}>XP</div>
+                      </div>
+                    </div>
+
+                    <h2 style={{margin:'0 0 6px',fontSize:28,fontWeight:900,color:'#fff',textAlign:'center'}}>
+                      إجابة صحيحة! 🎉
+                    </h2>
+                    <p style={{margin:'0 0 24px',fontSize:15,color:'rgba(255,255,255,0.7)',textAlign:'center'}}>
+                      نار فخور بيك! 🤖
+                    </p>
+
+                    {/* Explanation (collapsible feel) */}
+                    {result.feedback_ar && (
+                      <div style={{background:'rgba(255,255,255,0.1)',borderRadius:14,padding:'12px 16px',marginBottom:20,width:'100%',boxSizing:'border-box',textAlign:'right'}}>
+                        <div style={{fontSize:13,color:'rgba(255,255,255,0.5)',marginBottom:4}}>💡 الشرح:</div>
+                        <div style={{fontSize:14,color:'rgba(255,255,255,0.9)',lineHeight:1.7}}>{result.feedback_ar}</div>
+                      </div>
+                    )}
+
+                    <button onClick={()=>setActive(null)}
+                      style={{width:'100%',padding:'16px',borderRadius:14,border:'none',background:'#58CC02',color:'#fff',fontWeight:900,fontSize:18,cursor:'pointer',boxShadow:'0 4px 16px #58CC0260',letterSpacing:0.5}}>
+                      المتابعة ←
                     </button>
-                  )}
-                  <button onClick={()=>setActive(null)}
-                    style={{flex:1,padding:'14px',borderRadius:14,border:'none',background:result.is_correct?'#58CC02':'#1CB0F6',color:'#fff',fontWeight:900,fontSize:15,cursor:'pointer'}}>
-                    {result.is_correct ? 'رائع! 🎉' : 'رجوع'}
-                  </button>
-                </div>
+                  </div>
+                ) : (
+                  /* ═══════ WRONG ANSWER SCREEN ═══════ */
+                  <div>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+                      <div style={{fontSize:13,color:'#FF4B4B',fontWeight:700}}>إجابة خاطئة</div>
+                      <button onClick={()=>setActive(null)} style={{width:30,height:30,borderRadius:7,border:'none',background:'#f0f0f0',cursor:'pointer',fontSize:14}}>✕</button>
+                    </div>
+
+                    {/* Wrong indicator */}
+                    <div style={{background:'#FFE5E5',borderRadius:14,padding:'14px 16px',marginBottom:14,border:'2px solid #FF4B4B',display:'flex',alignItems:'center',gap:12}}>
+                      <span style={{fontSize:32}}>😔</span>
+                      <div>
+                        <div style={{fontWeight:800,color:'#FF4B4B',fontSize:15,marginBottom:2}}>الإجابة الصحيحة:</div>
+                        <div style={{fontSize:14,color:'#7f1d1d',fontWeight:700}}>{active.options?.[active.correct_answer]}</div>
+                      </div>
+                    </div>
+
+                    {/* MCQ options */}
+                    <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:14}}>
+                      {(active.options||[]).map((opt:string,i:number)=>{
+                        const isCorrect = i===active.correct_answer
+                        const isSelected = i===selectedOption
+                        return (
+                          <div key={i} style={{padding:'12px 14px',borderRadius:12,border:`2px solid ${isCorrect?'#58CC02':isSelected&&!isCorrect?'#FF4B4B':'#f0f0f0'}`,background:isCorrect?'#D7FFB8':isSelected&&!isCorrect?'#FFE5E5':'#f9f9f9',display:'flex',alignItems:'center',gap:10}}>
+                            <span style={{width:28,height:28,borderRadius:8,background:isCorrect?'#58CC02':isSelected&&!isCorrect?'#FF4B4B':'#f0f0f0',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,flexShrink:0}}>
+                              {isCorrect?'✓':isSelected&&!isCorrect?'✗':['أ','ب','ج','د'][i]}
+                            </span>
+                            <span style={{fontSize:14,fontWeight:isCorrect?700:400,color:isCorrect?'#27500A':isSelected&&!isCorrect?'#7f1d1d':'#555'}}>{opt}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Explanation */}
+                    {result.feedback_ar && (
+                      <div style={{background:'#FFF3E0',borderRadius:12,padding:'12px 14px',marginBottom:16,border:'2px solid #FF9600',textAlign:'right'}}>
+                        <div style={{fontSize:12,color:'#A56644',fontWeight:700,marginBottom:4}}>🔍 التصحيح:</div>
+                        <div style={{fontSize:13,color:'#7f3d00',lineHeight:1.7}}>{result.feedback_ar}</div>
+                      </div>
+                    )}
+
+                    <div style={{display:'flex',gap:10}}>
+                      <button onClick={()=>{setStep('mcq');setSelectedOption(null);setResult(null)}}
+                        style={{flex:1,padding:'14px',borderRadius:14,border:'2px solid #1CB0F6',background:'transparent',color:'#1CB0F6',fontWeight:800,fontSize:14,cursor:'pointer'}}>
+                        🔄 حاول مرة أخرى
+                      </button>
+                      <button onClick={()=>setActive(null)}
+                        style={{flex:1,padding:'14px',borderRadius:14,border:'none',background:'#f0f0f0',color:'#666',fontWeight:700,fontSize:14,cursor:'pointer'}}>
+                        رجوع
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -436,6 +475,15 @@ export default function ChallengesPage() {
       <style>{`
         @keyframes fall {
           to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+        @keyframes xpPulse {
+          0% { transform: scale(0.5); opacity: 0; }
+          60% { transform: scale(1.1); opacity: 1; }
+          100% { transform: scale(1); }
+        }
+        @keyframes twinkle {
+          from { opacity: 0.3; transform: scale(0.8); }
+          to { opacity: 1; transform: scale(1.2); }
         }
       `}</style>
     </div>
