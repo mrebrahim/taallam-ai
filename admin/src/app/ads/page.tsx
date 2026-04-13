@@ -40,6 +40,14 @@ const EMPTY: any = {
   is_active: true,
   show_frequency: 'once',
   sort_order: 0,
+  // CTA Banner
+  cta_banner_image_url: '',
+  cta_banner_title_ar: '',
+  cta_banner_subtitle_ar: '',
+  cta_price_egp: 0,
+  cta_price_label_ar: 'جرّبه مقابل',
+  cta_internal_section: '',
+  cta_open_external: false,
 }
 
 function extractVimeoId(input: string): string {
@@ -106,6 +114,26 @@ export default function AdsPage() {
     }))
   }
 
+  const uploadBanner = async (file: File) => {
+    setUploadingBanner(true)
+    const ext = file.name.split('.').pop()
+    const filename = `ad-banner-${Date.now()}.${ext}`
+    const res = await fetch(`${URL2}/storage/v1/object/challenges/${filename}`, {
+      method: 'POST',
+      headers: { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': file.type, 'x-upsert': 'true' },
+      body: file,
+    })
+    if (res.ok) {
+      const url = `${URL2}/storage/v1/object/public/challenges/${filename}`
+      setForm((f: any) => ({ ...f, cta_banner_image_url: url }))
+      setMsg('✅ تم رفع صورة البانر')
+    } else {
+      setMsg('❌ فشل رفع البانر')
+    }
+    setUploadingBanner(false)
+    setTimeout(() => setMsg(''), 3000)
+  }
+
   const toggleAudience = (key: string) => {
     setForm((f: any) => {
       const curr: string[] = f.target_audience || []
@@ -146,6 +174,13 @@ export default function AdsPage() {
       is_active: form.is_active,
       show_frequency: form.show_frequency,
       sort_order: Number(form.sort_order) || 0,
+      cta_banner_image_url: form.cta_banner_image_url || null,
+      cta_banner_title_ar: form.cta_banner_title_ar || null,
+      cta_banner_subtitle_ar: form.cta_banner_subtitle_ar || null,
+      cta_price_egp: Number(form.cta_price_egp) || 0,
+      cta_price_label_ar: form.cta_price_label_ar || 'جرّبه مقابل',
+      cta_internal_section: form.cta_internal_section || null,
+      cta_open_external: form.cta_open_external || false,
     }
     let res: Response
     if (editing) {

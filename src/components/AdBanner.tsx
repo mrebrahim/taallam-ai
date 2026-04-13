@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import CTABanner from './CTABanner'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -27,6 +28,7 @@ export default function AdBanner({ userId, enrolledRoadmapSlugs, placement = 'ho
   const [ad, setAd]           = useState<any>(null)
   const [playing, setPlaying] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const [showCTA, setShowCTA] = useState(false)
 
   useEffect(() => { loadAd() }, [userId])
 
@@ -65,6 +67,10 @@ export default function AdBanner({ userId, enrolledRoadmapSlugs, placement = 'ho
     if (!toShow) return
 
     setAd(toShow)
+    // Show CTA banner 3s after ad loads (if banner image exists)
+    if (toShow.cta_banner_image_url || toShow.cta_banner_title_ar) {
+      setTimeout(() => setShowCTA(true), 3000)
+    }
     await supabase.from('ad_views').upsert({ user_id: userId, ad_id: toShow.id, viewed_at: new Date().toISOString() }, { onConflict: 'user_id,ad_id' })
     try { await supabase.rpc('increment_ad_views', { ad_id: toShow.id }) } catch {}
   }
