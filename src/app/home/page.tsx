@@ -1,4 +1,5 @@
 'use client'
+import AdBanner from '@/components/AdBanner'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
@@ -56,6 +57,7 @@ export default function HomePage() {
   const [todayChallenge, setTodayChallenge] = useState<any>(null)
   const [challengeDone, setChallengeDone]   = useState(false)
   const [streakFreeze, setStreakFreeze]      = useState<any>(null)
+  const [enrolledSlugs, setEnrolledSlugs]     = useState<string[]>([])
   const [loading, setLoading]         = useState(true)
   const [streakAnim, setStreakAnim]    = useState(false)
   const hasLoaded                      = useRef(false)
@@ -74,6 +76,15 @@ export default function HomePage() {
       ])
       setUser(u)
       setStreakFreeze(freezes?.[0] || null)
+
+      // Fetch enrolled roadmap slugs for ad targeting
+      const { data: enrollData } = await supabase
+        .from('course_enrollments')
+        .select('roadmaps(slug)')
+        .eq('user_id', session.user.id)
+        .eq('is_active', true)
+      const slugs = enrollData?.map((e: any) => e.roadmaps?.slug).filter(Boolean) || []
+      setEnrolledSlugs(slugs)
 
       // Check streak freeze / XP deduction on login
       if (u) {
@@ -314,6 +325,15 @@ export default function HomePage() {
               </div>
             </Link>
           </div>
+        )}
+
+        {/* AD BANNER */}
+        {user && (
+          <AdBanner
+            userId={user.id}
+            enrolledRoadmapSlugs={enrolledSlugs}
+            placement="home"
+          />
         )}
 
         {/* QUICK ACTIONS */}

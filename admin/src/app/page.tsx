@@ -28,6 +28,7 @@ export default function Dashboard() {
     { href:'/lessons',     icon:'📚', label:'الدروس',     desc:'أضف وعدّل دروس المسارات', color:'#58CC02' },
     { href:'/challenges',  icon:'⚔️',  label:'التحديات',   desc:'أنشئ تحديات أسبوعية', color:'#CE82FF' },
     { href:'/enrollments', icon:'🎓', label:'المشتركين',  desc:'سجّل مستخدمين في الكورسات', color:'#1CB0F6' },
+    { href:'/ads',         icon:'📢', label:'الإعلانات',  desc:'أضف إعلانات مستهدفة للمستخدمين', color:'#CE82FF' },
     { href:'/users',       icon:'👥', label:'المستخدمين', desc:'عرض بيانات كل المستخدمين', color:'#FF9600' },
     { href:'/roadmaps',    icon:'🗺️', label:'المسارات',   desc:'إدارة مسارات التعلم', color:'#FF4B4B' },
   ]
