@@ -10,51 +10,7 @@ workflows:
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhc2tjb2dlY2pmd3V4dndsZHpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzgzODAsImV4cCI6MjA5MTI1NDM4MH0.ZrtuVXEEFfuEbIkofglo_rEKwZZllZJ1DN2DElpB0ec
-      # EXPO_TOKEN يجب إضافته في Codemagic → Environment variables
-
-    scripts:
-      - name: Install Expo and EAS CLI
-        script: |
-          npm install -g expo-cli eas-cli @expo/cli
-
-      - name: Install dependencies
-        script: |
-          cd mobile
-          npm install
-
-      - name: Expo prebuild (generate native code)
-        script: |
-          cd mobile
-          npx expo prebuild --platform android --clean
-
-      - name: Build APK with Gradle
-        script: |
-          cd mobile/android
-          chmod +x gradlew
-          ./gradlew assembleRelease
-
-    artifacts:
-      - mobile/android/app/build/outputs/apk/**/*.apk
-
-    publishing:
-      email:
-        recipients:
-          - ebrahimkhlil01@gmail.com
-        notify:
-          success: true
-          failure: true
-
-  android-eas:
-    name: Android APK via EAS (needs EXPO_TOKEN)
-    max_build_duration: 60
-    instance_type: mac_mini_m2
-
-    environment:
-      node: 20.11.0
-      vars:
-        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhc2tjb2dlY2pmd3V4dndsZHpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzgzODAsImV4cCI6MjA5MTI1NDM4MH0.ZrtuVXEEFfuEbIkofglo_rEKwZZllZJ1DN2DElpB0ec
-      # EXPO_TOKEN: $EXPO_TOKEN  (add in Codemagic secrets)
+        EXPO_TOKEN: NiJTfE-PmV3Ooa1s0j42DvnuzDkHzMFBZDjxJV_3
 
     scripts:
       - name: Install EAS CLI
@@ -66,22 +22,96 @@ workflows:
           cd mobile
           npm install
 
-      - name: Login to Expo
-        script: |
-          eas whoami || echo "Not logged in - make sure EXPO_TOKEN is set"
-          echo "EXPO_TOKEN is: ${EXPO_TOKEN:0:10}..."
-
       - name: Build APK via EAS
         script: |
           cd mobile
-          EXPO_TOKEN=$EXPO_TOKEN eas build \
+          eas build \
             --platform android \
             --profile preview \
-            --non-interactive \
-            --no-wait
+            --non-interactive
 
     artifacts:
       - "**/*.apk"
+
+    publishing:
+      email:
+        recipients:
+          - ebrahimkhlil01@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  android-production:
+    name: Android Google Play (AAB)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhc2tjb2dlY2pmd3V4dndsZHpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzgzODAsImV4cCI6MjA5MTI1NDM4MH0.ZrtuVXEEFfuEbIkofglo_rEKwZZllZJ1DN2DElpB0ec
+        EXPO_TOKEN: NiJTfE-PmV3Ooa1s0j42DvnuzDkHzMFBZDjxJV_3
+
+    scripts:
+      - name: Install EAS CLI
+        script: npm install -g eas-cli
+
+      - name: Install dependencies
+        script: |
+          cd mobile
+          npm install
+
+      - name: Build AAB
+        script: |
+          cd mobile
+          eas build \
+            --platform android \
+            --profile production \
+            --non-interactive
+
+    artifacts:
+      - "**/*.aab"
+
+    publishing:
+      email:
+        recipients:
+          - ebrahimkhlil01@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  ios-production:
+    name: iOS App Store
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhc2tjb2dlY2pmd3V4dndsZHpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzgzODAsImV4cCI6MjA5MTI1NDM4MH0.ZrtuVXEEFfuEbIkofglo_rEKwZZllZJ1DN2DElpB0ec
+        EXPO_TOKEN: NiJTfE-PmV3Ooa1s0j42DvnuzDkHzMFBZDjxJV_3
+
+    scripts:
+      - name: Install EAS CLI
+        script: npm install -g eas-cli
+
+      - name: Install dependencies
+        script: |
+          cd mobile
+          npm install
+
+      - name: Build IPA
+        script: |
+          cd mobile
+          eas build \
+            --platform ios \
+            --profile production \
+            --non-interactive
+
+    artifacts:
+      - "**/*.ipa"
 
     publishing:
       email:
