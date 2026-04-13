@@ -1,4 +1,5 @@
 'use client'
+import StreakTargetModal from '@/components/StreakTargetModal'
 import AdBanner from '@/components/AdBanner'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -58,6 +59,10 @@ export default function HomePage() {
   const [challengeDone, setChallengeDone]   = useState(false)
   const [streakFreeze, setStreakFreeze]      = useState<any>(null)
   const [enrolledSlugs, setEnrolledSlugs]     = useState<string[]>([])
+  const [streakTarget, setStreakTarget]         = useState<any>(null)
+  const [nextStreakTarget, setNextStreakTarget]  = useState<any>(null)
+  const [allTargets, setAllTargets]             = useState<any[]>([])
+  const [completedTargetDays, setCompletedTargetDays] = useState<Set<number>>(new Set())
   const [loading, setLoading]         = useState(true)
   const [streakAnim, setStreakAnim]    = useState(false)
   const hasLoaded                      = useRef(false)
@@ -76,6 +81,50 @@ export default function HomePage() {
       ])
       setUser(u)
       setStreakFreeze(freezes?.[0] || null)
+
+      // Check streak targets
+      if (u && u.streak_current > 0) {
+        const [{ data: allTargets }, { data: completedTargets }] = await Promise.all([
+          supabase.from('streak_targets').select('*').eq('is_active', true).order('days'),
+          supabase.from('user_streak_targets').select('target_days').eq('user_id', session.user.id),
+        ])
+
+        if (allTargets) {
+          const completedDays = new Set(completedTargets?.map((t: any) => t.target_days) || [])
+          setAllTargets(allTargets)
+          setCompletedTargetDays(completedDays as Set<number>)
+
+          // Check if current streak hits any uncompleted target
+          const justCompleted = allTargets.find(t =>
+            t.days <= u.streak_current && !completedDays.has(t.days)
+          )
+
+          if (justCompleted) {
+            // Award XP and mark target as completed
+            await supabase.from('user_streak_targets').upsert({
+              user_id: session.user.id,
+              target_days: justCompleted.days,
+              xp_awarded: justCompleted.xp_reward,
+            }, { onConflict: 'user_id,target_days' })
+
+            try {
+              await supabase.rpc('award_xp', {
+                p_user_id: session.user.id,
+                p_amount: justCompleted.xp_reward,
+                p_reason: 'streak_target',
+                p_reference_id: justCompleted.id,
+              })
+            } catch {}
+
+            // Find next target
+            const updatedCompleted = new Set([...completedDays, justCompleted.days])
+            const next = allTargets.find(t => !updatedCompleted.has(t.days) && t.days > u.streak_current)
+
+            setStreakTarget(justCompleted)
+            setNextStreakTarget(next || null)
+          }
+        }
+      }
 
       // Fetch enrolled roadmap slugs for ad targeting
       const { data: enrollData } = await supabase
@@ -290,6 +339,53 @@ export default function HomePage() {
           )}
         </div>
 
+        {/* STREAK TARGETS PROGRESS */}
+        {allTargets.length > 0 && (
+          <div style={{ background:'#fff', borderRadius:18, padding:'16px 18px', marginBottom:16, border:'2px solid #f0f0f0' }}>
+            <div style={{ fontSize:14, fontWeight:800, color:'#333', marginBottom:12, display:'flex', alignItems:'center', gap:8 }}>
+              🎯 أهداف الـ Streak
+            </div>
+            <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:4 }}>
+              {allTargets.slice(0, 6).map((t: any) => {
+                const done = completedTargetDays.has(t.days)
+                const isNext = !done && !allTargets.filter((x: any) => !completedTargetDays.has(x.days)).some((x: any) => x.days < t.days)
+                const pct = Math.min(100, Math.round(((user?.streak_current || 0) / t.days) * 100))
+                return (
+                  <div key={t.days} style={{
+                    flexShrink: 0, width: 64,
+                    background: done ? t.badge_color + '20' : isNext ? t.badge_color + '10' : '#f7f7f7',
+                    borderRadius: 12, padding: '10px 6px',
+                    border: `2px solid ${done ? t.badge_color : isNext ? t.badge_color + '60' : '#f0f0f0'}`,
+                    textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>{done ? '✅' : t.emoji}</div>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: done ? t.badge_color : isNext ? t.badge_color : '#aaa' }}>
+                      {t.days}
+                    </div>
+                    <div style={{ fontSize: 9, color: done ? t.badge_color : '#aaa', fontWeight: 600 }}>يوم</div>
+                    {isNext && !done && (
+                      <div style={{ marginTop: 4, height: 3, background: '#f0f0f0', borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: t.badge_color, borderRadius: 99 }} />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            {/* Next target message */}
+            {(() => {
+              const next = allTargets.find((t: any) => !completedTargetDays.has(t.days))
+              if (!next) return null
+              const remaining = next.days - (user?.streak_current || 0)
+              return (
+                <div style={{ marginTop: 10, fontSize: 12, color: '#999', textAlign: 'right' }}>
+                  {remaining <= 0 ? '🎉 حققت الهدف!' : `باقي ${remaining} يوم للوصول لـ ${next.days} يوم (${next.title_ar})`}
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
         {/* TODAY'S DAILY CHALLENGE */}
         {todayChallenge && (
           <div style={{ marginBottom:16 }}>
@@ -325,6 +421,16 @@ export default function HomePage() {
               </div>
             </Link>
           </div>
+        )}
+
+        {/* STREAK TARGET MODAL */}
+        {streakTarget && (
+          <StreakTargetModal
+            completedTarget={streakTarget}
+            nextTarget={nextStreakTarget}
+            streak={user?.streak_current || 0}
+            onContinue={() => setStreakTarget(null)}
+          />
         )}
 
         {/* AD BANNER */}
