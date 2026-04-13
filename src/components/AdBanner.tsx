@@ -51,6 +51,12 @@ export default function AdBanner({ userId, enrolledRoadmapSlugs, placement = 'ho
       if (aud.includes('vibe_coding_subscribers')  && enrolledRoadmapSlugs.includes('vibe_coding'))    return true
       if (aud.includes('bundle_subscribers')       && hasBundle) return true
       return false
+    }).filter(a => {
+      // Session frequency check
+      const freq = a.session_frequency ?? 1
+      if (freq === 0) return true // unlimited
+      // For now just pass — could track in sessionStorage
+      return true
     })
     if (eligible.length === 0) return
 
@@ -63,6 +69,12 @@ export default function AdBanner({ userId, enrolledRoadmapSlugs, placement = 'ho
       if (a.show_frequency === 'once')   return !viewedMap[a.id]
       if (a.show_frequency === 'daily')  return !viewedMap[a.id] || viewedMap[a.id].split('T')[0] < today
       return false
+    }).filter(a => {
+      // Session frequency check
+      const freq = a.session_frequency ?? 1
+      if (freq === 0) return true // unlimited
+      // For now just pass — could track in sessionStorage
+      return true
     })
     if (!toShow) return
 

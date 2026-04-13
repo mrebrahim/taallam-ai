@@ -48,6 +48,12 @@ const EMPTY: any = {
   cta_price_label_ar: 'جرّبه مقابل',
   cta_internal_section: '',
   cta_open_external: false,
+  // Placement
+  placement_type: 'app_wide',
+  placement_challenges: [] as string[],
+  placement_roadmap_slug: '',
+  placement_lesson_ids: [] as string[],
+  session_frequency: 1,
 }
 
 function extractVimeoId(input: string): string {
@@ -59,6 +65,12 @@ function extractVimeoId(input: string): string {
 
 export default function AdsPage() {
   const [ads, setAds]           = useState<any[]>([])
+  const [roadmaps] = useState([
+    { slug: 'n8n_automation', title: 'أتمتة n8n', emoji: '⚡', id: 'bd1942e6-f441-4222-987e-f27720342e73' },
+    { slug: 'ai_video', title: 'AI Video', emoji: '🎬', id: '4a93c9bb-cc30-45b7-81da-346e97080a33' },
+    { slug: 'vibe_coding', title: 'Vibe Coding', emoji: '💻', id: '9ae5cb21-7481-4877-98b1-08726d0b795b' },
+  ])
+  const [lessons, setLessons] = useState<any[]>([])
   const [form, setForm]         = useState<any>({ ...EMPTY, target_audience: ['all'] })
   const [editing, setEditing]   = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -147,6 +159,14 @@ export default function AdsPage() {
     })
   }
 
+  const loadLessons = async (roadmapSlug: string) => {
+    if (!roadmapSlug) { setLessons([]); return }
+    const rm = roadmaps.find(r => r.slug === roadmapSlug)
+    if (!rm) return
+    const r = await fetch(`${URL2}/rest/v1/lessons?select=id,title_ar,sort_order&roadmap_id=eq.${rm.id}&order=sort_order`, { headers: H }).then(r => r.json())
+    setLessons(Array.isArray(r) ? r : [])
+  }
+
   const save = async () => {
     if (!form.title_ar) { setMsg('❌ اكتب عنوان الإعلان'); setTimeout(() => setMsg(''), 3000); return }
     setSaving(true)
@@ -181,6 +201,11 @@ export default function AdsPage() {
       cta_price_label_ar: form.cta_price_label_ar || 'جرّبه مقابل',
       cta_internal_section: form.cta_internal_section || null,
       cta_open_external: form.cta_open_external || false,
+      placement_type: form.placement_type || 'app_wide',
+      placement_challenges: form.placement_challenges || [],
+      placement_roadmap_slug: form.placement_roadmap_slug || null,
+      placement_lesson_ids: form.placement_lesson_ids || [],
+      session_frequency: Number(form.session_frequency) || 1,
     }
     let res: Response
     if (editing) {
