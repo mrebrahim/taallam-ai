@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { useLocalSearchParams, router } from 'expo-router'
 import { WebView } from 'react-native-webview'
-import * as ScreenCapture from 'expo-screen-capture'
+// import * as ScreenCapture from 'expo-screen-capture'  // disabled - version compatibility
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -26,12 +26,12 @@ export default function LessonScreen() {
   useEffect(() => {
     // Prevent screenshots and screen recording
     const enableProtection = async () => {
-      await ScreenCapture.preventScreenCaptureAsync()
+//       await ScreenCapture.preventScreenCaptureAsync()  // disabled - version compatibility
     }
     enableProtection()
 
     // Listen for screen capture events (iOS 11+ / Android)
-    const subscription = ScreenCapture.addScreenshotListener(() => {
+//     const subscription = ScreenCapture.addScreenshotListener(() => {  // disabled - version compatibility
       Alert.alert(
         '⚠️ تنبيه',
         'تسجيل المحتوى غير مسموح به. قد يؤدي ذلك إلى إيقاف حسابك.',
@@ -54,7 +54,7 @@ export default function LessonScreen() {
 
     return () => {
       // Re-enable screen capture when leaving lesson
-      ScreenCapture.allowScreenCaptureAsync()
+//       ScreenCapture.allowScreenCaptureAsync()  // disabled - version compatibility
       subscription.remove()
       appStateListener.remove()
     }

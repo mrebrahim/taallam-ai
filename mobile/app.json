@@ -39,7 +39,6 @@
     },
     "plugins": [
       "expo-router",
-      "expo-screen-capture",
       [
         "expo-notifications",
         {
@@ -50,7 +49,9 @@
       ],
       [
         "expo-av",
-        { "microphonePermission": false }
+        {
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {
