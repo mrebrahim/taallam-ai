@@ -1,243 +1,350 @@
 'use client'
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { getLevelInfo, LEVELS } from '@/types'
+import Link from 'next/link'
+import { useEffect, useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 
-const DUO = {
-  green:'#58CC02', greenDk:'#58A700', blue:'#1CB0F6', blueDk:'#1899D6',
-  orange:'#FF9600', purple:'#CE82FF', greenL:'#D7FFB8', blueL:'#DDF4FF',
-  orangeL:'#FFF5D3', purpleL:'#F5E6FF',
+// ══════════════════════════════════════════
+// NAR MASCOT — messages based on streak
+// ══════════════════════════════════════════
+function getNarMessage(streak: number, name: string, hour: number): { msg: string; mood: 'happy' | 'sad' | 'fire' | 'warning' } {
+  const isEvening = hour >= 18
+
+  if (streak === 0) return { msg: `أهلاً ${name}! ابدأ رحلتك دلوقتي 🚀`, mood: 'happy' }
+  if (streak === 1) return { msg: `${name}! اليوم الأول دايماً الأصعب — وإنت عدّيته! 💪`, mood: 'happy' }
+  if (streak < 7) {
+    if (isEvening) return { msg: `${name}! اليوم ${streak} — وفي وقت ممتاز للتعلم! 🔥`, mood: 'fire' }
+    return { msg: `${streak} أيام متواصلة! إنت أحسن من 80% من الطلاب 💪`, mood: 'fire' }
+  }
+  if (streak < 14) return { msg: `أسبوع كامل! العادة بدأت تتكون 🎯 استمر!`, mood: 'fire' }
+  if (streak < 30) return { msg: `${streak} يوم متواصل! 🔥 إنت من أقوى الطلاب`, mood: 'fire' }
+  if (streak >= 30) return { msg: `⚠️ ${streak} يوم! ده إنجاز حقيقي — ماتضيعوش!`, mood: 'warning' }
+  return { msg: `أهلاً ${name}!`, mood: 'happy' }
 }
 
-const ROADMAP_META: Record<string, {emoji:string; color:string; bg:string; label:string; desc:string}> = {
-  n8n_automation: {emoji:'⚡', color:DUO.green,  bg:DUO.greenL,  label:'أتمتة n8n',   desc:'وصّل أدواتك تلقائياً'},
-  ai_video:       {emoji:'🎬', color:DUO.orange, bg:DUO.orangeL, label:'AI Video',     desc:'فيديوهات بالذكاء الاصطناعي'},
-  vibe_coding:    {emoji:'💻', color:DUO.purple, bg:DUO.purpleL, label:'Vibe Coding',  desc:'ابنِ تطبيقات بدون كود'},
+const NAR_MOODS = {
+  happy:   { emoji: '🤖', bg: '#D7FFB8', border: '#58CC02', color: '#27500A' },
+  fire:    { emoji: '🔥', bg: '#FFF5D3', border: '#FF9600', color: '#A56644' },
+  sad:     { emoji: '😢', bg: '#FFE5E5', border: '#FF4B4B', color: '#7f1d1d' },
+  warning: { emoji: '⚠️', bg: '#FFE5E5', border: '#FF4B4B', color: '#7f1d1d' },
 }
 
-const QUOTES = ['هتبقى محترف قريباً! 🚀','كل يوم خطوة للأمام! 💪','إنت بتعمل حاجة عظيمة! ⭐','لا تكسر الـ streak! 🔥']
+// Level thresholds
+const LEVELS = [
+  { level:1, name:'مبتدئ',    xp:0,    color:'#94a3b8' },
+  { level:2, name:'متعلم',    xp:100,  color:'#58CC02' },
+  { level:3, name:'محترف',    xp:400,  color:'#1CB0F6' },
+  { level:4, name:'خبير',     xp:900,  color:'#FF9600' },
+  { level:5, name:'أسطورة',   xp:1600, color:'#CE82FF' },
+  { level:6, name:'نخبة إبراهيم', xp:2500, color:'#FFD700' },
+]
+
+function getLevelInfo(xp: number) {
+  let current = LEVELS[0], next = LEVELS[1]
+  for (let i = 0; i < LEVELS.length; i++) {
+    if (xp >= LEVELS[i].xp) { current = LEVELS[i]; next = LEVELS[i+1] || LEVELS[i] }
+  }
+  const progress = next.xp > current.xp
+    ? Math.min(100, Math.round(((xp - current.xp) / (next.xp - current.xp)) * 100))
+    : 100
+  return { current, next, progress, xpToNext: Math.max(0, next.xp - xp) }
+}
 
 export default function HomePage() {
-  const [user, setUser] = useState<any>(null)
-  const [roadmaps, setRoadmaps] = useState<any[]>([])
-  const [progress, setProgress] = useState<Record<string, any>>({})
-  const [missions, setMissions] = useState<any[]>([])
-  const [quote] = useState(() => QUOTES[Math.floor(Math.random() * QUOTES.length)])
-  const [authChecked, setAuthChecked] = useState(false)
+  const router = useRouter()
+  const [user, setUser]               = useState<any>(null)
+  const [todayChallenge, setTodayChallenge] = useState<any>(null)
+  const [challengeDone, setChallengeDone]   = useState(false)
+  const [streakFreeze, setStreakFreeze]      = useState<any>(null)
+  const [loading, setLoading]         = useState(true)
+  const [streakAnim, setStreakAnim]    = useState(false)
+  const hasLoaded                      = useRef(false)
 
   useEffect(() => {
+    if (hasLoaded.current) return
+    hasLoaded.current = true
     const supabase = createClient()
+    const load = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.replace('/auth/login'); return }
 
-    const loadAll = async (userId: string, accessToken: string) => {
-      // Load user profile
-      const { data: profile } = await supabase.from('users').select('*').eq('id', userId).single()
-      if (profile) setUser(profile)
-
-      // Load roadmaps + progress in parallel
-      const [{ data: rm }, { data: prog }, { data: miss }] = await Promise.all([
-        supabase.from('roadmaps').select('*').order('sort_order'),
-        supabase.from('user_roadmap_progress').select('*').eq('user_id', userId),
-        supabase.from('daily_missions').select('*').eq('user_id', userId).eq('mission_date', new Date().toISOString().split('T')[0]),
+      const [{ data: u }, { data: freezes }] = await Promise.all([
+        supabase.from('users').select('*').eq('id', session.user.id).single(),
+        supabase.from('streak_freezes').select('*').eq('user_id', session.user.id).is('used_at', null),
       ])
-      if (rm) setRoadmaps(rm)
-      if (prog) {
-        const m: Record<string, any> = {}
-        prog.forEach((p: any) => { m[p.roadmap_id] = p })
-        setProgress(m)
+      setUser(u)
+      setStreakFreeze(freezes?.[0] || null)
+
+      // Load today's daily challenge
+      const today = new Date().toISOString().split('T')[0]
+      const { data: schedule } = await supabase
+        .from('daily_challenge_schedule')
+        .select('*, challenges(*)')
+        .eq('scheduled_date', today)
+        .maybeSingle()
+
+      if (schedule?.challenges) {
+        setTodayChallenge(schedule.challenges)
+        // Check if already done today
+        const { data: attempt } = await supabase
+          .from('user_challenge_attempts')
+          .select('id, is_correct')
+          .eq('user_id', session.user.id)
+          .eq('challenge_id', schedule.challenges.id)
+          .maybeSingle()
+        setChallengeDone(!!attempt)
+      } else {
+        // Pick a random active challenge as today's challenge
+        const { data: challenges } = await supabase
+          .from('challenges')
+          .select('*')
+          .eq('is_active', true)
+          .limit(20)
+
+        if (challenges && challenges.length > 0) {
+          // Deterministic pick based on date
+          const dayNum = Math.floor(Date.now() / 86400000)
+          const picked = challenges[dayNum % challenges.length]
+          setTodayChallenge(picked)
+
+          // Schedule it
+          await supabase.from('daily_challenge_schedule').upsert({
+            challenge_id: picked.id,
+            scheduled_date: today,
+          }, { onConflict: 'scheduled_date' })
+
+          const { data: attempt } = await supabase
+            .from('user_challenge_attempts')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .eq('challenge_id', picked.id)
+            .maybeSingle()
+          setChallengeDone(!!attempt)
+        }
       }
-      if (miss) setMissions(miss)
+
+      setLoading(false)
+      // Trigger streak animation after load
+      setTimeout(() => setStreakAnim(true), 300)
     }
-
-    // Check session immediately
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setAuthChecked(true)
-      if (!session?.user) {
-        window.location.replace('/auth/login')
-        return
-      }
-      loadAll(session.user.id, session.access_token)
-    })
-
-    // Also listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') { window.location.replace('/auth/login') }
-    })
-
-    return () => subscription.unsubscribe()
+    load()
   }, [])
 
-  const signOut = async () => {
-    await createClient().auth.signOut()
-    window.location.replace('/auth/login')
-  }
-
-  // Show minimal skeleton only while checking auth (< 500ms usually)
-  if (!authChecked) {
-    return (
-      <div style={{display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', background:'#f7f7f7'}}>
-        <div style={{textAlign:'center'}}>
-          <div style={{fontSize:48, marginBottom:12}}>🦉</div>
-          <div style={{color:'#999', fontSize:14}}>جاري التحميل...</div>
-        </div>
+  if (loading) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f7f7f7' }}>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ fontSize:64, marginBottom:12, animation:'pulse 1s infinite' }}>🤖</div>
+        <div style={{ fontSize:14, color:'#999' }}>جاري التحميل...</div>
       </div>
-    )
-  }
+    </div>
+  )
 
-  // Page renders immediately after auth check, user data fills in as it loads
-  const levelInfo = user ? getLevelInfo(user.xp_total) : { name_ar: '...', color: '#ccc', xp_min: 0 }
-  const nextLevel = user ? LEVELS.find(l => l.level === user.current_level + 1) : null
-  const xpPct = (user && nextLevel) ? Math.min(100, ((user.xp_total - levelInfo.xp_min) / (nextLevel.xp_min - levelInfo.xp_min)) * 100) : 0
-  const enrolledRoadmaps = roadmaps.filter(r => progress[r.id])
-  const completedMissions = missions.filter(m => m.completed).length
+  const hour = new Date().getHours()
+  const firstName = user?.full_name?.split(' ')[0] || user?.username || 'يا بطل'
+  const nar = getNarMessage(user?.streak_current || 0, firstName, hour)
+  const narStyle = NAR_MOODS[nar.mood]
+  const lvl = getLevelInfo(user?.xp_total || 0)
+
+  // Streak phase messaging
+  const streak = user?.streak_current || 0
+  let streakLabel = ''
+  let streakSub = ''
+  if (streak === 0) { streakLabel = 'ابدأ اليوم'; streakSub = 'أول درس = أول streak' }
+  else if (streak < 7) { streakLabel = `🔥 ${streak} يوم`; streakSub = `${7 - streak} أيام لتحقيق أول أسبوع!` }
+  else if (streak < 30) { streakLabel = `🔥 ${streak} يوم`; streakSub = 'العادة بتتكون — لا توقف!' }
+  else { streakLabel = `🔥 ${streak} يوم`; streakSub = `إنجاز ضخم — ماتضيعوش! 🛡️` }
 
   return (
-    <div dir="rtl" style={{maxWidth:480, margin:'0 auto', padding:'0 0 90px', fontFamily:"'Segoe UI', Tahoma, sans-serif", background:'#f7f7f7', minHeight:'100vh'}}>
+    <div dir="rtl" style={{ maxWidth:480, margin:'0 auto', minHeight:'100vh', background:'#f7f7f7', fontFamily:"'Segoe UI',Tahoma,sans-serif", paddingBottom:90 }}>
 
-      {/* TOP BAR */}
-      <header style={{background:'#fff', padding:'14px 16px 10px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'2px solid #f0f0f0', position:'sticky', top:0, zIndex:50}}>
-        <div style={{display:'flex', gap:8}}>
-          <Link href="/streak" style={{display:'flex', alignItems:'center', gap:5, background:DUO.orangeL, borderRadius:99, padding:'6px 14px', fontWeight:800, fontSize:15, color:'#A56644', textDecoration:'none', border:'2px solid #FFD580'}}>
-            🔥 {user?.streak_current ?? '—'}
-          </Link>
-          <div style={{display:'flex', alignItems:'center', gap:5, background:DUO.blueL, borderRadius:99, padding:'6px 14px', fontWeight:800, fontSize:15, color:'#1453A3', border:'2px solid #BBF2FF'}}>
-            💎 {user?.coins_balance?.toLocaleString() ?? '—'}
+      {/* Header */}
+      <header style={{ background:'#fff', padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'2px solid #f0f0f0' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ width:40, height:40, borderRadius:12, background: lvl.current.color + '20', border:`2px solid ${lvl.current.color}`, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, color:lvl.current.color, fontSize:16 }}>
+            {user?.current_level || 1}
+          </div>
+          <div>
+            <div style={{ fontSize:14, fontWeight:700, color:'#333' }}>{firstName}</div>
+            <div style={{ fontSize:11, color:lvl.current.color, fontWeight:600 }}>{lvl.current.name}</div>
           </div>
         </div>
-        <button onClick={signOut} style={{width:42, height:42, borderRadius:14, background: levelInfo.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:800, color:'#fff', border:'none', cursor:'pointer'}}>
-          {user?.current_level ?? '?'}
-        </button>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          {/* Streak badge */}
+          <div style={{
+            background: streak > 0 ? '#FFF5D3' : '#f5f5f5',
+            borderRadius:99, padding:'5px 12px',
+            display:'flex', alignItems:'center', gap:5,
+            border: streak >= 7 ? '2px solid #FF9600' : '2px solid transparent',
+            transform: streakAnim && streak > 0 ? 'scale(1.05)' : 'scale(1)',
+            transition:'transform 0.3s',
+          }}>
+            <span style={{ fontSize:16 }}>🔥</span>
+            <span style={{ fontSize:15, fontWeight:900, color: streak > 0 ? '#FF9600' : '#aaa' }}>{streak}</span>
+          </div>
+          {/* Coins */}
+          <div style={{ background:'#DDF4FF', borderRadius:99, padding:'5px 12px', display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ fontSize:14 }}>💎</span>
+            <span style={{ fontSize:13, fontWeight:800, color:'#1453A3' }}>{(user?.coins_balance || 0).toLocaleString()}</span>
+          </div>
+        </div>
       </header>
 
-      <div style={{padding:'16px 16px 0'}}>
+      <div style={{ padding:'16px 16px 0' }}>
 
-        {/* GREETING */}
-        <div style={{marginBottom:20}}>
-          <p style={{margin:'0 0 4px', fontSize:14, color:'#777'}}>أهلاً، {user?.full_name?.split(' ')[0] || user?.username || '...'}!</p>
-          <h1 style={{margin:0, fontSize:22, fontWeight:900, color:'#333', lineHeight:1.2}}>{quote}</h1>
+        {/* NAR MESSAGE */}
+        <div style={{ background:narStyle.bg, borderRadius:18, padding:'14px 16px', marginBottom:16, border:`2px solid ${narStyle.border}`, display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ fontSize:36, flexShrink:0 }}>{narStyle.emoji}</div>
+          <div>
+            <div style={{ fontSize:15, fontWeight:700, color:narStyle.color, lineHeight:1.5 }}>{nar.msg}</div>
+            <div style={{ fontSize:11, color:narStyle.color + 'aa', marginTop:2 }}>نار — مساعدك الذكي 🤖</div>
+          </div>
         </div>
 
-        {/* XP CARD */}
-        {user && (
-          <div style={{background:'#fff', borderRadius:20, padding:'16px 18px', marginBottom:16, border:'2px solid #f0f0f0', boxShadow:'0 2px 12px rgba(0,0,0,0.06)'}}>
-            <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:12}}>
-              <div style={{width:48, height:48, borderRadius:14, background:`linear-gradient(135deg, ${levelInfo.color}, ${levelInfo.color}cc)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, fontWeight:900, color:'#fff', flexShrink:0}}>
-                {user.current_level}
-              </div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:16, fontWeight:800, color:'#333', marginBottom:2}}>{levelInfo.name_ar}</div>
-                {nextLevel && <div style={{fontSize:12, color:'#999'}}>{(nextLevel.xp_min - user.xp_total).toLocaleString()} XP للمستوى التالي</div>}
-              </div>
-              <div style={{fontSize:15, fontWeight:800, color:levelInfo.color}}>{user.xp_total?.toLocaleString()} XP</div>
-            </div>
-            <div style={{height:12, background:'#f0f0f0', borderRadius:99, overflow:'hidden'}}>
-              <div style={{height:'100%', background:levelInfo.color, borderRadius:99, width:`${xpPct}%`, transition:'width 1s ease'}}/>
+        {/* XP & Level Progress */}
+        <div style={{ background:'#fff', borderRadius:18, padding:'16px 18px', marginBottom:16, border:'2px solid #f0f0f0' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+            <span style={{ fontSize:13, color:'#999' }}>المستوى التالي: {lvl.next.name}</span>
+            <span style={{ fontSize:14, fontWeight:800, color: lvl.current.color }}>
+              {(user?.xp_total || 0).toLocaleString()} XP
+            </span>
+          </div>
+          <div style={{ height:14, background:'#f0f0f0', borderRadius:99, overflow:'hidden', marginBottom:6 }}>
+            <div style={{
+              height:'100%', borderRadius:99,
+              background: `linear-gradient(90deg, ${lvl.current.color}, ${lvl.next.color || lvl.current.color})`,
+              width:`${lvl.progress}%`,
+              transition:'width 1s ease',
+              position:'relative'
+            }}>
+              {lvl.progress > 20 && (
+                <span style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', fontSize:10, fontWeight:800, color:'#fff' }}>
+                  {lvl.progress}%
+                </span>
+              )}
             </div>
           </div>
-        )}
-
-        {/* DAILY MISSIONS */}
-        {missions.length > 0 && (
-          <div style={{marginBottom:20}}>
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10}}>
-              <h2 style={{margin:0, fontSize:17, fontWeight:800, color:'#333'}}>مهام اليوم</h2>
-              <span style={{background: completedMissions===missions.length ? DUO.greenL : DUO.orangeL, color: completedMissions===missions.length ? '#27500A' : '#A56644', borderRadius:99, padding:'3px 12px', fontSize:13, fontWeight:800}}>
-                {completedMissions}/{missions.length}
-              </span>
+          {lvl.xpToNext > 0 && (
+            <div style={{ fontSize:11, color:'#aaa', textAlign:'left' }}>
+              {lvl.xpToNext.toLocaleString()} XP للوصول لـ {lvl.next.name}
             </div>
-            {missions.map(m => (
-              <div key={m.id} style={{display:'flex', alignItems:'center', gap:12, background:'#fff', borderRadius:16, padding:'12px 14px', marginBottom:8, border:`2px solid ${m.completed ? DUO.green : '#f0f0f0'}`}}>
-                <div style={{width:40, height:40, borderRadius:12, background: m.completed ? DUO.greenL : '#f7f7f7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0}}>
-                  {m.completed ? '✅' : m.mission_type==='complete_lesson' ? '📚' : '⚡'}
+          )}
+        </div>
+
+        {/* STREAK CARD */}
+        <div style={{
+          background: streak >= 30 ? 'linear-gradient(135deg,#FF4B4B,#FF9600)' : streak >= 7 ? 'linear-gradient(135deg,#FF9600,#FF4B4B)' : '#fff',
+          borderRadius:18, padding:'16px 18px', marginBottom:16,
+          border: streak > 0 ? 'none' : '2px solid #f0f0f0',
+          position:'relative', overflow:'hidden'
+        }}>
+          {streak > 0 && <div style={{ position:'absolute', top:-20, left:-20, fontSize:80, opacity:0.08 }}>🔥</div>}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <div style={{ fontSize:28, fontWeight:900, color: streak > 0 ? '#fff' : '#333', marginBottom:2 }}>
+                {streakLabel}
+              </div>
+              <div style={{ fontSize:13, color: streak > 0 ? 'rgba(255,255,255,0.85)' : '#999' }}>
+                {streakSub}
+              </div>
+            </div>
+            {/* Streak freeze shield */}
+            {streakFreeze && (
+              <div style={{ background:'rgba(255,255,255,0.2)', borderRadius:12, padding:'8px 12px', textAlign:'center' }}>
+                <div style={{ fontSize:22 }}>🛡️</div>
+                <div style={{ fontSize:10, color: streak > 0 ? '#fff' : '#666', fontWeight:700 }}>Freeze</div>
+              </div>
+            )}
+          </div>
+          {/* Streak days visualization */}
+          {streak > 0 && streak <= 14 && (
+            <div style={{ display:'flex', gap:4, marginTop:10, flexWrap:'wrap' }}>
+              {Array.from({length: Math.min(streak, 14)}).map((_,i) => (
+                <div key={i} style={{ width:24, height:24, borderRadius:6, background:'rgba(255,255,255,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12 }}>
+                  🔥
                 </div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:14, fontWeight:700, color: m.completed ? '#999' : '#333', textDecoration: m.completed ? 'line-through' : 'none'}}>
-                    {m.mission_type==='complete_lesson' ? 'أكمل درساً' : m.mission_type==='win_quiz' ? 'اربح في Quiz' : 'شارك في تحدي'}
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* TODAY'S DAILY CHALLENGE */}
+        {todayChallenge && (
+          <div style={{ marginBottom:16 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:'#999', marginBottom:8 }}>
+              ⚡ تحدي اليوم — ينتهي في منتصف الليل
+            </div>
+            <Link href="/challenges" style={{ textDecoration:'none' }}>
+              <div style={{
+                background: challengeDone ? '#D7FFB8' : 'linear-gradient(135deg,#1CB0F6,#0090CC)',
+                borderRadius:18, padding:'16px 18px',
+                border: challengeDone ? '2px solid #58CC02' : 'none',
+                position:'relative', overflow:'hidden'
+              }}>
+                {!challengeDone && <div style={{ position:'absolute', top:-15, left:-15, fontSize:60, opacity:0.1 }}>⚔️</div>}
+                <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                  <div style={{ width:48, height:48, borderRadius:14, background: challengeDone ? '#58CC02' : 'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, flexShrink:0 }}>
+                    {challengeDone ? '✅' : '⚔️'}
                   </div>
-                  <div style={{fontSize:12, color:DUO.green, fontWeight:800}}>+{m.xp_reward} XP</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* CONTINUE LEARNING */}
-        {enrolledRoadmaps.length > 0 && (
-          <div style={{marginBottom:20}}>
-            <h2 style={{margin:'0 0 10px', fontSize:17, fontWeight:800, color:'#333'}}>كمّل من حيث وقفت</h2>
-            {enrolledRoadmaps.map(r => {
-              const meta = ROADMAP_META[r.slug]; const prog = progress[r.id]
-              if (!meta) return null
-              const pct = r.total_xp > 0 ? Math.min(100, Math.round((prog.total_xp_earned / r.total_xp) * 100)) : 0
-              return (
-                <Link key={r.id} href={`/learn?roadmap=${r.slug}`} style={{display:'flex', alignItems:'center', gap:14, background:'#fff', borderRadius:20, padding:'14px 16px', textDecoration:'none', border:'2px solid #f0f0f0', marginBottom:10}}>
-                  <div style={{width:52, height:52, borderRadius:16, background:meta.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, flexShrink:0}}>{meta.emoji}</div>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:15, fontWeight:800, color:'#333', marginBottom:8}}>{meta.label}</div>
-                    <div style={{height:10, background:'#f0f0f0', borderRadius:99, overflow:'hidden'}}>
-                      <div style={{height:'100%', background:meta.color, borderRadius:99, width:`${pct}%`}}/>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:800, color: challengeDone ? '#27500A' : '#fff', fontSize:15, marginBottom:3 }}>
+                      {challengeDone ? 'أكملت تحدي اليوم! 🎉' : todayChallenge.title_ar}
+                    </div>
+                    <div style={{ fontSize:12, color: challengeDone ? '#58CC02' : 'rgba(255,255,255,0.8)' }}>
+                      {challengeDone ? `حصلت على ${todayChallenge.xp_reward} XP` : `3 دقائق فقط · +${todayChallenge.xp_reward} XP`}
                     </div>
                   </div>
-                  <span style={{fontSize:14, fontWeight:800, color:meta.color, flexShrink:0}}>{pct}%</span>
-                </Link>
-              )
-            })}
+                  {!challengeDone && (
+                    <div style={{ background:'rgba(255,255,255,0.25)', borderRadius:10, padding:'8px 12px', fontSize:13, fontWeight:800, color:'#fff', flexShrink:0 }}>
+                      ابدأ ←
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Link>
           </div>
         )}
 
-        {/* ALL PATHS */}
-        <div style={{marginBottom:20}}>
-          <h2 style={{margin:'0 0 10px', fontSize:17, fontWeight:800, color:'#333'}}>{enrolledRoadmaps.length===0 ? '🚀 ابدأ رحلتك' : 'كل المسارات'}</h2>
-          {Object.entries(ROADMAP_META).map(([slug, meta]) => {
-            const roadmap = roadmaps.find(r => r.slug===slug)
-            const isEnrolled = roadmap && progress[roadmap.id]
-            const pct = (roadmap && isEnrolled && roadmap.total_xp > 0) ? Math.min(100, Math.round((progress[roadmap.id].total_xp_earned / roadmap.total_xp) * 100)) : 0
-            return (
-              <Link key={slug} href={`/learn?roadmap=${slug}`} style={{display:'flex', alignItems:'center', gap:14, background:'#fff', borderRadius:20, padding:'14px 16px', textDecoration:'none', border:`2px solid ${isEnrolled ? meta.color+'40' : '#f0f0f0'}`, marginBottom:10, position:'relative', overflow:'hidden'}}>
-                <div style={{position:'absolute', right:0, top:0, bottom:0, width:4, background:meta.color, borderRadius:'0 20px 20px 0'}}/>
-                <div style={{width:52, height:52, borderRadius:16, background:meta.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, flexShrink:0}}>{meta.emoji}</div>
-                <div style={{flex:1}}>
-                  <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
-                    <span style={{fontSize:15, fontWeight:800, color:'#333'}}>{meta.label}</span>
-                    {isEnrolled && <span style={{background:meta.bg, color:meta.color, borderRadius:99, padding:'2px 8px', fontSize:10, fontWeight:800}}>مسجّل</span>}
-                  </div>
-                  <div style={{fontSize:12, color:'#999'}}>{meta.desc}</div>
-                  {isEnrolled && pct > 0 && <div style={{height:6, background:'#f0f0f0', borderRadius:99, marginTop:6, overflow:'hidden'}}><div style={{height:'100%', background:meta.color, borderRadius:99, width:`${pct}%`}}/></div>}
-                </div>
-                <span style={{fontSize:18, color:'#ddd'}}>←</span>
-              </Link>
-            )
-          })}
+        {/* QUICK ACTIONS */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16 }}>
+          {[
+            { href:'/learn',       icon:'📚', label:'كمّل التعلم',    color:'#58CC02', bg:'#D7FFB8' },
+            { href:'/leaderboard', icon:'🏆', label:'لوحة الترتيب',  color:'#1CB0F6', bg:'#DDF4FF' },
+            { href:'/challenges',  icon:'⚔️',  label:'التحديات',      color:'#CE82FF', bg:'#F5E6FF' },
+            { href:'/profile',     icon:'👤', label:'ملفي الشخصي',   color:'#FF9600', bg:'#FFF5D3' },
+          ].map(a => (
+            <Link key={a.href} href={a.href} style={{ textDecoration:'none' }}>
+              <div style={{ background:a.bg, borderRadius:16, padding:'14px 16px', border:`2px solid ${a.color}20`, display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:24 }}>{a.icon}</span>
+                <span style={{ fontSize:14, fontWeight:700, color:a.color }}>{a.label}</span>
+              </div>
+            </Link>
+          ))}
         </div>
 
-        {/* UPGRADE BANNER */}
-        {user?.subscription_plan === 'free' && (
-          <Link href="/upgrade" style={{display:'flex', alignItems:'center', gap:14, background:`linear-gradient(135deg, ${DUO.blue}, ${DUO.blueDk})`, borderRadius:20, padding:'18px 20px', marginBottom:20, textDecoration:'none', boxShadow:`0 8px 24px ${DUO.blue}40`, position:'relative', overflow:'hidden'}}>
-            <div style={{position:'absolute', right:-20, top:-20, width:80, height:80, borderRadius:'50%', background:'rgba(255,255,255,0.1)'}}/>
-            <span style={{fontSize:32, flexShrink:0}}>👑</span>
-            <div style={{flex:1}}>
-              <div style={{color:'#fff', fontWeight:900, fontSize:17, marginBottom:3}}>ترقّى لـ Pro</div>
-              <div style={{color:'rgba(255,255,255,0.85)', fontSize:13}}>XP مضاعف + دروس غير محدودة</div>
-            </div>
-            <div style={{background:'#fff', color:DUO.blue, borderRadius:12, padding:'10px 18px', fontSize:13, fontWeight:900, flexShrink:0}}>ابدأ</div>
-          </Link>
+        {/* STREAK FREEZE promotion if low streak */}
+        {streak >= 3 && streak < 7 && !streakFreeze && (
+          <div style={{ background:'#f7f7f7', borderRadius:16, padding:'14px 16px', border:'2px dashed #ddd', textAlign:'center' }}>
+            <div style={{ fontSize:28, marginBottom:4 }}>🛡️</div>
+            <div style={{ fontSize:14, fontWeight:700, color:'#333', marginBottom:4 }}>Streak Freeze</div>
+            <div style={{ fontSize:12, color:'#999' }}>احمِ streak بتاعك لليوم اللي تبقى فيه مشغول</div>
+          </div>
         )}
 
       </div>
 
-      {/* BOTTOM NAV */}
-      <nav style={{position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'#fff', borderTop:'2px solid #f0f0f0', display:'flex', padding:'8px 0 16px', zIndex:100, direction:'ltr', boxShadow:'0 -4px 20px rgba(0,0,0,0.06)'}}>
+      {/* Bottom Nav */}
+      <nav style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'#fff', borderTop:'2px solid #f0f0f0', display:'flex', padding:'8px 0 16px', zIndex:100, direction:'ltr' }}>
         {[
-          {href:'/profile',     icon:'👤', label:'ملفي'},
-          {href:'/leaderboard', icon:'🏆', label:'الترتيب'},
-          {href:'/challenges',  icon:'⚔️',  label:'التحديات'},
-          {href:'/learn',       icon:'📚', label:'التعلم'},
-          {href:'/home',        icon:'🏠', label:'الرئيسية', active:true},
+          { href:'/profile',     icon:'👤', label:'ملفي'     },
+          { href:'/leaderboard', icon:'🏆', label:'الترتيب'  },
+          { href:'/challenges',  icon:'⚔️',  label:'التحديات'},
+          { href:'/learn',       icon:'📚', label:'التعلم'   },
+          { href:'/home',        icon:'🏠', label:'الرئيسية', active:true },
         ].map(n => (
-          <Link key={n.href} href={n.href} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, textDecoration:'none', padding:'4px 0', position:'relative'}}>
-            {(n as any).active && <div style={{position:'absolute', top:-8, left:'50%', transform:'translateX(-50%)', width:32, height:3, borderRadius:99, background:DUO.blue}}/>}
-            <span style={{fontSize:22}}>{n.icon}</span>
-            <span style={{fontSize:10, fontWeight:(n as any).active ? 800 : 400, color:(n as any).active ? DUO.blue : '#aaa'}}>{n.label}</span>
+          <Link key={n.href} href={n.href} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, textDecoration:'none', padding:'4px 0', position:'relative' }}>
+            {(n as any).active && <div style={{ position:'absolute', top:-8, left:'50%', transform:'translateX(-50%)', width:32, height:3, borderRadius:99, background:'#1CB0F6' }}/>}
+            <span style={{ fontSize:22 }}>{n.icon}</span>
+            <span style={{ fontSize:10, fontWeight:(n as any).active?800:400, color:(n as any).active?'#1CB0F6':'#aaa' }}>{n.label}</span>
           </Link>
         ))}
       </nav>
