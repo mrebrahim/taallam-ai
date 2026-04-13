@@ -1,4 +1,5 @@
 'use client'
+import CelebrationScreen from '@/components/CelebrationScreen'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
@@ -21,7 +22,8 @@ export default function ChallengesPage() {
   const [result, setResult]     = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading]   = useState(true)
-  const [showConfetti, setShowConfetti] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [celebrationXP, setCelebrationXP] = useState(0)
 
   useEffect(() => {
     const supabase = createClient()
@@ -118,8 +120,8 @@ export default function ChallengesPage() {
             p_reason: 'challenge_complete', p_reference_id: active.id,
           })
         } catch {}
-        setShowConfetti(true)
-        setTimeout(() => setShowConfetti(false), 3000)
+        setCelebrationXP(active.xp_reward)
+        setShowCelebration(true)
       }
 
       setResult(aiResult)
@@ -144,21 +146,14 @@ export default function ChallengesPage() {
   return (
     <div dir="rtl" style={{maxWidth:480,margin:'0 auto',minHeight:'100vh',background:'#f7f7f7',fontFamily:"'Segoe UI',Tahoma,sans-serif",paddingBottom:90}}>
 
-      {/* Confetti animation */}
-      {showConfetti && (
-        <div style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:999,overflow:'hidden'}}>
-          {Array.from({length:20}).map((_,i) => (
-            <div key={i} style={{
-              position:'absolute',
-              left:`${Math.random()*100}%`,
-              top:-20,
-              fontSize:20,
-              animation:`fall ${1+Math.random()*2}s linear ${Math.random()}s forwards`,
-            }}>
-              {['🎉','⭐','🔥','💎','✨'][Math.floor(Math.random()*5)]}
-            </div>
-          ))}
-        </div>
+      {/* Celebration Screen */}
+      {showCelebration && (
+        <CelebrationScreen
+          xp={celebrationXP}
+          title={active ? `🎉 ${active.title_ar}` : '🎉 أحسنت!'}
+          subtitle={`حصلت على +${celebrationXP} XP! استمر وحافظ على الـ streak 🔥`}
+          onContinue={() => { setShowCelebration(false); setActive(null) }}
+        />
       )}
 
       {/* Header */}

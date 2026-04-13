@@ -1,4 +1,5 @@
 'use client'
+import CelebrationScreen from '@/components/CelebrationScreen'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -12,6 +13,7 @@ export default function LessonPage() {
   const [completed, setCompleted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [completing, setCompleting] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -57,6 +59,7 @@ export default function LessonPage() {
 
     setCompleted(true)
     setCompleting(false)
+    setShowCelebration(true)
   }
 
   if (loading) return (
@@ -184,6 +187,16 @@ export default function LessonPage() {
         )}
 
       </div>
+
+      {/* Celebration Screen */}
+      {showCelebration && lesson && (
+        <CelebrationScreen
+          xp={lesson.xp_reward}
+          title={`✅ ${lesson.title_ar}`}
+          subtitle="أكملت الدرس! استمر في رحلة التعلم 🚀"
+          onContinue={() => { setShowCelebration(false) }}
+        />
+      )}
 
       {/* Complete Button - fixed bottom */}
       <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, padding:'12px 16px 20px', background:'linear-gradient(transparent, #f7f7f7 30%)', zIndex:50 }}>
