@@ -162,6 +162,7 @@ export default function ChallengesPage() {
       {/* Quiz Session Mode */}
       {quizMode && challenges.length > 0 && (
         <QuizSession
+          streak={user?.streak_current || 0}
           questions={challenges.map(ch => ({
             id: ch.id,
             title_ar: ch.title_ar,

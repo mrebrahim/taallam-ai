@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import CelebrationScreen from './CelebrationScreen'
+import StreakCelebration from './StreakCelebration'
 
 interface Question {
   id: string
@@ -15,13 +16,14 @@ interface Question {
 
 interface Props {
   questions: Question[]
+  streak?: number
   onComplete: (results: { correct: number; total: number; xpEarned: number }) => void
   onExit: () => void
 }
 
 const HEARTS = 3 // max mistakes before session ends (optional)
 
-export default function QuizSession({ questions, onComplete, onExit }: Props) {
+export default function QuizSession({ questions, streak = 0, onComplete, onExit }: Props) {
   const [queueOriginal]   = useState<Question[]>(questions)
   const [queue, setQueue]           = useState<Question[]>([...questions])
   const [current, setCurrent]       = useState(0)
@@ -35,7 +37,9 @@ export default function QuizSession({ questions, onComplete, onExit }: Props) {
   const [correctCount, setCorrectCount] = useState(0)
   const [xpEarned, setXpEarned]    = useState(0)
   const [showCelebration, setShowCelebration] = useState(false)
+  const [showStreakCelebration, setShowStreakCelebration] = useState(false)
   const [sessionDone, setSessionDone] = useState(false)
+  const startTimeRef = useRef(Date.now())
   const [showNarCorrect, setShowNarCorrect] = useState(false)
   const [showNarFix, setShowNarFix] = useState(false) // "هيا نصلح بعض الأخطاء"
 
@@ -72,7 +76,11 @@ export default function QuizSession({ questions, onComplete, onExit }: Props) {
       if (reviewIndex + 1 >= reviewQueue.length) {
         // Done with review — session complete!
         setSessionDone(true)
-        setShowCelebration(true)
+        if (streak > 0) {
+          setShowStreakCelebration(true)
+        } else {
+          setShowCelebration(true)
+        }
       } else {
         setReviewIndex(prev => prev + 1)
       }
@@ -99,6 +107,24 @@ export default function QuizSession({ questions, onComplete, onExit }: Props) {
     setReviewIndex(0)
     setInReview(true)
     setMistakes([])
+  }
+
+  const elapsedSeconds = Math.floor((Date.now() - startTimeRef.current) / 1000)
+  const accuracy = Math.round((correctCount / Math.max(totalQ, 1)) * 100)
+
+  if (sessionDone && showStreakCelebration) {
+    return (
+      <StreakCelebration
+        streak={streak}
+        xpEarned={xpEarned}
+        accuracy={accuracy}
+        timeSeconds={elapsedSeconds}
+        onContinue={() => {
+          setShowStreakCelebration(false)
+          setShowCelebration(true)
+        }}
+      />
+    )
   }
 
   if (sessionDone && showCelebration) {
