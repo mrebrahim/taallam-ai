@@ -75,6 +75,18 @@ export default function HomePage() {
       setUser(u)
       setStreakFreeze(freezes?.[0] || null)
 
+      // Check streak freeze / XP deduction on login
+      if (u) {
+        try {
+          const { data: streakCheck } = await supabase.rpc('check_streak_on_login', { p_user_id: session.user.id })
+          if (streakCheck?.status === 'missed_days') {
+            // Refetch user to get updated XP
+            const { data: updatedUser } = await supabase.from('users').select('*').eq('id', session.user.id).single()
+            setUser(updatedUser)
+          }
+        } catch {}
+      }
+
       // Load today's daily challenge
       const today = new Date().toISOString().split('T')[0]
       const { data: schedule } = await supabase
