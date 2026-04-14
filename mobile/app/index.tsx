@@ -1,18 +1,36 @@
-import { Redirect } from 'expo-router'
-import { useAuth } from '@/hooks/useAuth'
+import { useEffect } from 'react'
 import { View, ActivityIndicator } from 'react-native'
+import { router } from 'expo-router'
+import { supabase } from '@/lib/supabase'
+import { loadLang } from '@/lib/i18n'
 import { Colors } from '@/constants/Colors'
 
 export default function Index() {
-  const { session, loading } = useAuth()
+  useEffect(() => {
+    const init = async () => {
+      // Check if lang was chosen
+      const { chosen } = await loadLang()
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.bg }}>
-        <ActivityIndicator size="large" color={Colors.green} />
-      </View>
-    )
-  }
+      if (!chosen) {
+        // First time — show language selector
+        router.replace('/lang')
+        return
+      }
 
-  return session ? <Redirect href="/(tabs)/home" /> : <Redirect href="/(auth)/login" />
+      // Check auth session
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        router.replace('/(tabs)/home')
+      } else {
+        router.replace('/(auth)/login')
+      }
+    }
+    init()
+  }, [])
+
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' }}>
+      <ActivityIndicator color={Colors.green} size="large" />
+    </View>
+  )
 }

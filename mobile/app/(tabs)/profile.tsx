@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
+import { getLang, saveLang, type Lang } from '@/lib/i18n'
 
 const LEVELS = [
   { level:1, name:'مبتدئ',    xp:0,    color:'#94a3b8' },
@@ -26,6 +27,8 @@ function getLvl(xp: number) {
 
 export default function ProfileScreen() {
   const { user } = useAuth()
+  const [lang, setLang] = useState<Lang>(getLang())
+  const [showLangModal, setShowLangModal] = useState(false)
   const [stats, setStats] = useState({ completed_challenges: 0, completed_lessons: 0, groups: 0 })
 
   useEffect(() => {
@@ -40,6 +43,12 @@ export default function ProfileScreen() {
     }
     load()
   }, [user])
+
+  const changeLang = async (newLang: Lang) => {
+    await saveLang(newLang)
+    setLang(newLang)
+    setShowLangModal(false)
+  }
 
   const logout = async () => {
     Alert.alert('تسجيل الخروج', 'هل أنت متأكد؟', [
@@ -108,7 +117,8 @@ export default function ProfileScreen() {
         {/* Quick links */}
         <View style={s.card}>
           {[
-            { icon:'📿', label:'صدقة العلم', onPress:() => router.push('/sadaqat' as any) },
+            { icon:'🌐', label: lang === 'ar' ? 'تغيير اللغة' : 'Change Language', onPress:() => setShowLangModal(true) },
+            { icon:'📿', label: lang === 'ar' ? 'صدقة العلم' : 'Sadaqat Al-Ilm', onPress:() => router.push('/sadaqat' as any) },
             { icon:'🏆', label:'لوحة الترتيب', onPress:() => router.push('/(tabs)/leaderboard' as any) },
           ].map((item, i) => (
             <TouchableOpacity key={i} style={[s.link, i>0 && { borderTopWidth: 1, borderTopColor: Colors.border }]}
@@ -126,6 +136,32 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+      {/* Language Modal */}
+      <Modal visible={showLangModal} animationType="slide" presentationStyle="pageSheet" transparent>
+        <View style={{ flex:1, justifyContent:'flex-end', backgroundColor:'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor:'#fff', borderRadius:24, padding:24, paddingBottom:40 }}>
+            <Text style={{ fontSize:18, fontWeight:'900', color:'#333', textAlign:'center', marginBottom:20 }}>
+              🌐 {lang === 'ar' ? 'اختر اللغة' : 'Choose Language'}
+            </Text>
+            {([['ar','🇸🇦','العربية','Arabic'],['en','🇺🇸','English','الإنجليزية']] as const).map(([l,flag,name,sub]) => (
+              <TouchableOpacity key={l} onPress={() => changeLang(l)}
+                style={{ flexDirection:'row', alignItems:'center', gap:14, padding:16, borderRadius:14, marginBottom:8, backgroundColor: lang===l ? '#DDF4FF' : '#f7f7f7', borderWidth:2, borderColor: lang===l ? Colors.blue : '#f0f0f0' }}>
+                <Text style={{ fontSize:32 }}>{flag}</Text>
+                <View style={{ flex:1 }}>
+                  <Text style={{ fontSize:17, fontWeight:'800', color: lang===l ? Colors.blue : '#333' }}>{name}</Text>
+                  <Text style={{ fontSize:13, color:'#999' }}>{sub}</Text>
+                </View>
+                {lang===l && <Text style={{ color:Colors.blue, fontSize:20 }}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity onPress={() => setShowLangModal(false)}
+              style={{ marginTop:8, padding:14, alignItems:'center', borderRadius:12, backgroundColor:'#f0f0f0' }}>
+              <Text style={{ fontWeight:'700', color:'#666' }}>{lang === 'ar' ? 'إغلاق' : 'Close'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   )
 }
