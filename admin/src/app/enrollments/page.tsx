@@ -43,7 +43,7 @@ export default function EnrollmentsPage() {
       ] = await Promise.all([
         supabase
           .from('course_enrollments')
-          .select('*, users(id, full_name, email, username), roadmaps(id, title_ar, slug)')
+          .select('*, user:users!course_enrollments_user_id_fkey(id, full_name, email, username), roadmaps(id, title_ar, slug)')
           .order('enrolled_at', { ascending: false }),
         supabase
           .from('users')
@@ -146,8 +146,8 @@ export default function EnrollmentsPage() {
     if (!search) return true
     const q = search.toLowerCase()
     return (
-      e.users?.email?.toLowerCase().includes(q) ||
-      e.users?.full_name?.toLowerCase().includes(q) ||
+      e.user?.email?.toLowerCase().includes(q) ||
+      e.user?.full_name?.toLowerCase().includes(q) ||
       e.roadmaps?.title_ar?.includes(q)
     )
   })
@@ -252,10 +252,10 @@ export default function EnrollmentsPage() {
                   return (
                     <tr key={e.id} style={{ borderTop: '1px solid #334155', background: i % 2 === 0 ? 'transparent' : '#162032' }}>
                       <td style={{ padding: '13px 16px', fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>
-                        {e.users?.full_name || e.users?.username || e.user_id?.slice(0, 8) + '...'}
+                        {e.user?.full_name || e.user?.username || e.user_id?.slice(0, 8) + '...'}
                       </td>
                       <td style={{ padding: '13px 16px', fontSize: 13, color: '#94a3b8' }}>
-                        {e.users?.email || '—'}
+                        {e.user?.email || '—'}
                       </td>
                       <td style={{ padding: '13px 16px' }}>
                         <span style={{ background: color + '20', color, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 700 }}>
