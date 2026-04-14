@@ -41,7 +41,8 @@
       ]
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-screen-capture"
     ],
     "experiments": {
       "typedRoutes": true

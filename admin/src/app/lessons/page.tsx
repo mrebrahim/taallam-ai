@@ -427,11 +427,11 @@ export default function LessonsPage() {
                   <div style={{ background: '#0f172a', borderRadius: 12, padding: 16, border: '2px solid #1d4ed8' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 18 }}>🎬</span>
-                      <span style={{ fontWeight: 700, color: '#60a5fa', fontSize: 14 }}>Vimeo (موصى به)</span>
+                      <span style={{ fontWeight: 700, color: '#60a5fa', fontSize: 14 }}>🎬 Vimeo — مطلوب للتطبيق المحمول</span>
                     </div>
                     <input value={form.vimeo_url || ''} onChange={e => handleVimeoInput(e.target.value)} placeholder="https://vimeo.com/123456789  أو  123456789"
                       style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${form.vimeo_id ? '#1d4ed8' : '#334155'}`, background: '#1e293b', color: '#fff', fontSize: 13, boxSizing: 'border-box', fontFamily: 'monospace' }} />
-                    {form.vimeo_id && <div style={{ marginTop: 6, fontSize: 12, color: '#60a5fa' }}>✅ Vimeo ID: {form.vimeo_id}</div>}
+                    {form.vimeo_id && <div style={{ marginTop: 6, fontSize: 12, color: '#60a5fa' }}>✅ Vimeo ID: {form.vimeo_id} — سيظهر في التطبيق المحمول ✅</div>}
                     {vimeoPreview && (
                       <div style={{ marginTop: 10, position: 'relative', paddingBottom: '56.25%', borderRadius: 8, overflow: 'hidden', background: '#000' }}>
                         <iframe src={vimeoPreview} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allow="autoplay; fullscreen" allowFullScreen />
@@ -441,7 +441,7 @@ export default function LessonsPage() {
 
                   {/* YouTube fallback */}
                   <div style={{ background: '#0f172a', borderRadius: 12, padding: 12, border: '1px solid #334155' }}>
-                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>📺 YouTube (احتياطي)</div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>📺 YouTube (احتياطي — للمتصفح فقط)</div>
                     <input value={form.video_url || ''} onChange={e => setForm((f: any) => ({ ...f, video_url: e.target.value }))} placeholder="https://youtube.com/watch?v=..."
                       style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #334155', background: '#1e293b', color: '#fff', fontSize: 13, boxSizing: 'border-box', fontFamily: 'monospace' }} />
                   </div>
