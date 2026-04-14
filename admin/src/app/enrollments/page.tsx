@@ -30,14 +30,40 @@ export default function EnrollmentsPage() {
   }
 
   const enroll = async () => {
-    if (!form.user_id || !form.roadmap_id) { alert('اختر المستخدم والكورس'); return }
+    if (!form.user_id || !form.roadmap_id) { setMsg('❌ اختر المستخدم والكورس'); setTimeout(() => setMsg(''), 3000); return }
     setSaving(true)
-    const res = await fetch(`${URL2}/rest/v1/course_enrollments`, {
-      method: 'POST', headers: H,
-      body: JSON.stringify({ user_id: form.user_id, roadmap_id: form.roadmap_id, notes: form.notes, is_active: true })
+    // Use upsert to handle case where enrollment already exists
+    const upsertHeaders = {
+      ...H,
+      'Prefer': 'return=representation,resolution=merge-duplicates',
+      'on_conflict': 'user_id,roadmap_id'
+    }
+    const res = await fetch(`${URL2}/rest/v1/course_enrollments?on_conflict=user_id,roadmap_id`, {
+      method: 'POST',
+      headers: upsertHeaders,
+      body: JSON.stringify({ user_id: form.user_id, roadmap_id: form.roadmap_id, notes: form.notes || null, is_active: true, enrolled_at: new Date().toISOString() })
     })
-    if (res.ok) { setMsg('✅ تم تسجيل المستخدم في الكورس'); setShowForm(false); setForm({ user_id:'', roadmap_id:'', notes:'' }); load() }
-    else { const e = await res.json(); setMsg('❌ ' + (e?.message || 'خطأ')) }
+    if (res.ok || res.status === 201) {
+      setMsg('✅ تم تسجيل المستخدم في الكورس')
+      setShowForm(false)
+      setForm({ user_id:'', roadmap_id:'', notes:'' })
+      load()
+    } else {
+      // If still conflict, just reactivate existing enrollment
+      if (res.status === 409) {
+        await fetch(`${URL2}/rest/v1/course_enrollments?user_id=eq.${form.user_id}&roadmap_id=eq.${form.roadmap_id}`, {
+          method: 'PATCH', headers: H,
+          body: JSON.stringify({ is_active: true })
+        })
+        setMsg('✅ تم تفعيل الاشتراك الموجود')
+        setShowForm(false)
+        setForm({ user_id:'', roadmap_id:'', notes:'' })
+        load()
+      } else {
+        const e = await res.json().catch(() => ({}))
+        setMsg('❌ ' + (e?.message || res.status))
+      }
+    }
     setSaving(false)
     setTimeout(() => setMsg(''), 4000)
   }
