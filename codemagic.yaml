@@ -15,15 +15,14 @@ workflows:
 
     scripts:
       - name: Install Expo CLI
-        script: |
-          npm install -g @expo/cli
+        script: npm install -g @expo/cli
 
       - name: Install dependencies
         script: |
           cd mobile
           npm install
 
-      - name: Expo Prebuild (generate Android folder)
+      - name: Expo Prebuild
         script: |
           cd mobile
           npx expo prebuild --platform android --clean --no-install
@@ -32,7 +31,7 @@ workflows:
         script: |
           cd mobile/android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --stacktrace 2>&1 | grep -A 5 "SyntaxError\|error:\|Error:" | head -50
 
     artifacts:
       - mobile/android/app/build/outputs/apk/release/app-release.apk
