@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router'
 import { View, Text, StyleSheet, Platform } from 'react-native'
 import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
+import { Analytics } from '@/lib/analytics'
 
 function TabIcon({ emoji, label, active }: { emoji: string; label: string; active: boolean }) {
   return (

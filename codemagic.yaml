@@ -12,6 +12,7 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhc2tjb2dlY2pmd3V4dndsZHpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzgzODAsImV4cCI6MjA5MTI1NDM4MH0.ZrtuVXEEFfuEbIkofglo_rEKwZZllZJ1DN2DElpB0ec
         EXPO_TOKEN: NiJTfE-PmV3Ooa1s0j42DvnuzDkHzMFBZDjxJV_3
+        # GOOGLE_SERVICES_JSON: مضاف من Codemagic Secrets
 
     scripts:
       - name: Install Expo CLI
@@ -22,6 +23,18 @@ workflows:
           cd mobile
           npm install
 
+      - name: Setup google-services.json
+        script: |
+          cd mobile
+          # If GOOGLE_SERVICES_JSON secret is set, use it
+          # Otherwise use the placeholder (analytics won't work)
+          if [ ! -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" > google-services.json
+            echo "✅ google-services.json from secrets"
+          else
+            echo "⚠️ Using placeholder google-services.json (analytics disabled)"
+          fi
+
       - name: Expo Prebuild
         script: |
           cd mobile
@@ -31,7 +44,7 @@ workflows:
         script: |
           cd mobile/android
           chmod +x gradlew
-          ./gradlew assembleRelease --stacktrace 2>&1 | grep -A 5 "SyntaxError\|error:\|Error:" | head -50
+          ./gradlew assembleRelease
 
     artifacts:
       - mobile/android/app/build/outputs/apk/release/app-release.apk

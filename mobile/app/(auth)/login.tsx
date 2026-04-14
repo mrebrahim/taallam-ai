@@ -7,6 +7,7 @@ import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
+import { Analytics } from '@/lib/analytics'
 
 export default function LoginScreen() {
   const { isAr } = useLang()
@@ -34,6 +35,8 @@ export default function LoginScreen() {
         isAr ? 'الإيميل أو كلمة المرور غلط' : 'Wrong email or password'
       )
     } else {
+      Analytics.login('email')
+      Analytics.identify(email.trim().toLowerCase())
       router.replace('/(tabs)/home')
     }
   }

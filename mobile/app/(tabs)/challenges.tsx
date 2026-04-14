@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
+import { Analytics } from '@/lib/analytics'
 
 const DIFF_LABELS_AR = ['', 'سهل', 'متوسط', 'صعب', 'خبير', 'أسطوري']
 const DIFF_LABELS_EN = ['', 'Easy', 'Medium', 'Hard', 'Expert', 'Legendary']
@@ -50,6 +51,7 @@ export default function ChallengesScreen() {
 
   const openChallenge = (ch: any) => {
     setActive(ch)
+    Analytics.challengeStart(ch.id)
     setSelected(null)
     setAnswered(false)
     setIsCorrect(false)
@@ -62,6 +64,8 @@ export default function ChallengesScreen() {
       const correct = selected === active.correct_answer
       setIsCorrect(correct)
       setAnswered(true)
+      if (correct) Analytics.challengeCorrect(active.id, active.xp_reward)
+      else Analytics.challengeWrong(active.id)
 
       await supabase.from('user_challenge_attempts').upsert({
         user_id: user.id,

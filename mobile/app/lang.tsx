@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { router } from 'expo-router'
 import { useLang } from '@/lib/LanguageContext'
+import { Analytics } from '@/lib/analytics'
 import { type Lang } from '@/lib/i18n'
 import { Colors } from '@/constants/Colors'
 
@@ -11,6 +12,7 @@ export default function LangScreen() {
 
   const handleContinue = async () => {
     await changeLang(selected)
+    Analytics.langSelect(selected)
     router.replace('/(auth)/login')
   }
 

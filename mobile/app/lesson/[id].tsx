@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
+import { Analytics } from '@/lib/analytics'
 
 // ─── Video helpers ────────────────────────────────────────────
 function getYouTubeId(url: string): string | null {
@@ -216,6 +217,7 @@ export default function LessonScreen() {
         .eq('id', user.id)
 
       setCompleted(true)
+      Analytics.lessonComplete(id as string, lesson.xp_reward || 50)
       Alert.alert(
         isAr ? '🎉 أحسنت!' : '🎉 Well Done!',
         isAr
