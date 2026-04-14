@@ -55,7 +55,7 @@ export default function LearnScreen() {
 
       // Auto-select first enrolled roadmap
       const firstEnrolled = rm?.find((r: any) => validIds.has(r.id))
-      setSelected(firstEnrolled?.slug || rm?.[0]?.slug || null)
+      setSelected(firstEnrolled?.slug || null)
 
       setLoading(false)
     }
@@ -95,7 +95,8 @@ export default function LearnScreen() {
     </SafeAreaView>
   )
 
-  const currentRoadmap = roadmaps.find(r => r.slug === selected)
+  const enrolledRoadmaps = roadmaps.filter(r => enrolledIds.has(r.id))
+  const currentRoadmap = enrolledRoadmaps.find(r => r.slug === selected) || enrolledRoadmaps[0]
   const isEnrolled     = currentRoadmap ? enrolledIds.has(currentRoadmap.id) : false
   const currentLessons = currentRoadmap ? (lessons[currentRoadmap.id] || []) : []
   const meta           = selected ? ROADMAP_META[selected as keyof typeof ROADMAP_META] : null
@@ -125,7 +126,7 @@ export default function LearnScreen() {
         showsHorizontalScrollIndicator={false}
         style={s.tabs}
         contentContainerStyle={s.tabsContent}>
-        {roadmaps.map(r => {
+        {enrolledRoadmaps.map(r => {
           const m       = ROADMAP_META[r.slug as keyof typeof ROADMAP_META]
           const active  = selected === r.slug
           const enrolled = enrolledIds.has(r.id)
@@ -162,8 +163,21 @@ export default function LearnScreen() {
         })}
       </ScrollView>
 
+      {/* ── Empty State ── */}
+      {!loading && enrolledRoadmaps.length === 0 && (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+          <Text style={{ fontSize: 56, marginBottom: 16 }}>📚</Text>
+          <Text style={{ fontSize: 20, fontWeight: '900', color: Colors.text, marginBottom: 8, textAlign: 'center' }}>
+            {isAr ? 'لا يوجد كورسات بعد' : 'No courses yet'}
+          </Text>
+          <Text style={{ fontSize: 14, color: Colors.textSub, textAlign: 'center', lineHeight: 22, marginBottom: 24 }}>
+            {isAr ? 'تواصل مع الإدارة للاشتراك في كورس' : 'Contact admin to enroll in a course'}
+          </Text>
+        </View>
+      )}
+
       {/* ── Content ── */}
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scrollContent}>
+      {enrolledRoadmaps.length > 0 && <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scrollContent}>
 
         {!currentRoadmap ? (
           <View style={s.center}>
@@ -267,85 +281,10 @@ export default function LearnScreen() {
               })
             )}
           </>
-        ) : (
-          // ══ NOT ENROLLED — Show Locked with Price ══
-          <View style={s.lockedContainer}>
-            {/* Course info */}
-            <View style={[s.lockedHeader, { backgroundColor: meta?.bg || '#f5f5f5' }]}>
-              <Text style={{ fontSize: 56, marginBottom: 8 }}>{meta?.emoji || '📚'}</Text>
-              <Text style={[s.lockedTitle, { color: meta?.color }]}>
-                {isAr ? (meta?.label || currentRoadmap.title_ar) : currentRoadmap.title_ar}
-              </Text>
-              {(currentRoadmap.description_ar || meta?.desc) && (
-                <Text style={s.lockedDesc}>
-                  {isAr
-                    ? (currentRoadmap.description_ar || meta?.desc)
-                    : (currentRoadmap.description || currentRoadmap.description_ar || meta?.desc)}
-                </Text>
-              )}
-            </View>
-
-            {/* Price card */}
-            <View style={s.priceCard}>
-              <View style={s.priceRow}>
-                <View>
-                  <Text style={s.priceLabel}>{isAr ? 'السعر' : 'Price'}</Text>
-                  <View style={s.priceNumbers}>
-                    <Text style={[s.price, { color: meta?.color }]}>
-                      {currentRoadmap.price_egp > 0
-                        ? `${currentRoadmap.price_egp.toLocaleString()} ج.م`
-                        : (isAr ? 'مجاني' : 'Free')}
-                    </Text>
-                    {currentRoadmap.original_price_egp > 0 && currentRoadmap.original_price_egp > currentRoadmap.price_egp && (
-                      <Text style={s.originalPrice}>
-                        {currentRoadmap.original_price_egp.toLocaleString()} ج.م
-                      </Text>
-                    )}
-                  </View>
-                </View>
-                {currentRoadmap.original_price_egp > currentRoadmap.price_egp && (
-                  <View style={[s.discountBadge, { backgroundColor: Colors.red }]}>
-                    <Text style={s.discountText}>
-                      {Math.round((1 - currentRoadmap.price_egp / currentRoadmap.original_price_egp) * 100)}%
-                    </Text>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>خصم</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* Features */}
-            <View style={s.featuresCard}>
-              {[
-                isAr ? '✅ وصول كامل لجميع الدروس' : '✅ Full access to all lessons',
-                isAr ? '🎬 فيديوهات Vimeo عالية الجودة' : '🎬 High-quality Vimeo videos',
-                isAr ? '⚡ اكسب XP وتقدم في المستويات' : '⚡ Earn XP and level up',
-                isAr ? '📿 تحديات جماعية مع الزملاء' : '📿 Group challenges with peers',
-                isAr ? '🏆 شهادة إتمام الكورس' : '🏆 Course completion certificate',
-              ].map((f, i) => (
-                <Text key={i} style={s.featureItem}>{f}</Text>
-              ))}
-            </View>
-
-            {/* CTA */}
-            <View style={s.ctaSection}>
-              <Text style={s.ctaNote}>
-                {isAr
-                  ? 'للاشتراك تواصل مع الإدارة عبر واتساب'
-                  : 'Contact admin via WhatsApp to subscribe'}
-              </Text>
-              <View style={[s.lockedBanner, { borderColor: meta?.color + '40', backgroundColor: meta?.bg }]}>
-                <Text style={{ fontSize: 28 }}>🔒</Text>
-                <Text style={[s.lockedBannerText, { color: meta?.color }]}>
-                  {isAr ? 'هذا الكورس للمشتركين فقط' : 'This course is for subscribers only'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
+        ) : null}
 
         <View style={{ height: 24 }} />
-      </ScrollView>
+      </ScrollView>}
     </SafeAreaView>
   )
 }

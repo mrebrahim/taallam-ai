@@ -93,7 +93,7 @@ export default function HomeScreen() {
               if (!meta) return null
               const pct = r.total_xp > 0 && prog ? Math.min(100, Math.round((prog.total_xp_earned / r.total_xp) * 100)) : 0
               return (
-                <TouchableOpacity key={r.id} style={styles.roadmapCard} onPress={() => router.push({ pathname: '/(tabs)/learn', params: { roadmap: r.slug } })} activeOpacity={0.8}>
+                <TouchableOpacity key={r.id} style={styles.roadmapCard} onPress={() => router.push(`/course/${r.slug}` as any)} activeOpacity={0.8}>
                   <View style={[styles.roadmapIcon, { backgroundColor: meta.bg }]}>
                     <Text style={{ fontSize: 28 }}>{meta.emoji}</Text>
                   </View>
@@ -118,7 +118,7 @@ export default function HomeScreen() {
             const isEnrolled = roadmap && enrollments.has(roadmap.id)
             return (
               <TouchableOpacity key={slug} style={[styles.pathCard, isEnrolled && { borderColor: meta.color + '40' }]}
-                onPress={() => router.push({ pathname: '/(tabs)/learn', params: { roadmap: slug } })} activeOpacity={0.8}>
+                onPress={() => router.push(`/course/${slug}` as any)} activeOpacity={0.8}>
                 <View style={[styles.pathAccent, { backgroundColor: meta.color }]} />
                 <View style={[styles.pathIcon, { backgroundColor: meta.bg }]}>
                   <Text style={{ fontSize: 24 }}>{meta.emoji}</Text>

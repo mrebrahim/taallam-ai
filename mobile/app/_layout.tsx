@@ -50,7 +50,8 @@ function AppNavigator() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="auth/callback" />
-      <Stack.Screen name="lesson/[id]" options={{ presentation: 'card', animation: 'slide_from_right' }} />
+      <Stack.Screen name="course/[slug]" options={{ headerShown: false }} />
+        <Stack.Screen name="lesson/[id]" options={{ presentation: 'card', animation: 'slide_from_right' }} />
       <Stack.Screen name="sadaqat/index" />
       <Stack.Screen name="sadaqat/[id]" />
     </Stack>
