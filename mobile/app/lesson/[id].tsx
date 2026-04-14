@@ -24,38 +24,18 @@ export default function LessonScreen() {
   // 🔐 SCREEN CAPTURE PREVENTION
   // ══════════════════════════════════════════════════════
   useEffect(() => {
-    // Prevent screenshots and screen recording
-    const enableProtection = async () => {
-//       await ScreenCapture.preventScreenCaptureAsync()  // disabled - version compatibility
-    }
-    enableProtection()
-
-    // Listen for screen capture events (iOS 11+ / Android)
-//     const subscription = ScreenCapture.addScreenshotListener(() => {  // disabled - version compatibility
-      Alert.alert(
-        '⚠️ تنبيه',
-        'تسجيل المحتوى غير مسموح به. قد يؤدي ذلك إلى إيقاف حسابك.',
-        [{ text: 'حسناً', style: 'destructive' }]
-      )
-    })
-
     // App state listener — hide content when app goes to background
-    // (prevents screen recording via notification shade/control center)
     const appStateListener = AppState.addEventListener(
       'change',
       (nextState: AppStateStatus) => {
         if (nextState === 'background' || nextState === 'inactive') {
-          setIsRecording(true) // Show blur overlay
+          setIsRecording(true)
         } else {
           setIsRecording(false)
         }
       }
     )
-
     return () => {
-      // Re-enable screen capture when leaving lesson
-//       ScreenCapture.allowScreenCaptureAsync()  // disabled - version compatibility
-      subscription.remove()
       appStateListener.remove()
     }
   }, [])
