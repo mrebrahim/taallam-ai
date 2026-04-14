@@ -23,11 +23,15 @@ export default function LearnScreen() {
     const load = async () => {
       const [{ data: rm }, { data: en }, { data: lp }] = await Promise.all([
         supabase.from('roadmaps').select('*').order('sort_order'),
-        supabase.from('course_enrollments').select('roadmap_id').eq('user_id', user.id).eq('is_active', true),
+        supabase.from('course_enrollments').select('roadmap_id, expires_at').eq('user_id', user.id).eq('is_active', true),
         supabase.from('user_lesson_progress').select('lesson_id').eq('user_id', user.id).eq('completed', true),
       ])
       setRoadmaps(rm || [])
-      setEnrollments(new Set(en?.map((e: any) => e.roadmap_id) || []))
+      const now = new Date()
+      const validEnrollments = (en || []).filter((e: any) => 
+        !e.expires_at || new Date(e.expires_at) > now
+      )
+      setEnrollments(new Set(validEnrollments.map((e: any) => e.roadmap_id)))
       setCompletedLessons(new Set(lp?.map((d: any) => d.lesson_id) || []))
 
       const firstEnrolled = rm?.find((r: any) => en?.some((e: any) => e.roadmap_id === r.id))
