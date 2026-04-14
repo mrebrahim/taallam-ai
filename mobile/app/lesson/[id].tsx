@@ -46,7 +46,12 @@ export default function LessonScreen() {
   }, [id])
 
   const loadLesson = async () => {
-    if (!id || !user) return
+    if (!id) return
+    if (!user) {
+      // Wait a bit for auth to load
+      setTimeout(() => loadLesson(), 500)
+      return
+    }
     const [{ data: lessonData }, { data: progressData }] = await Promise.all([
       supabase.from('lessons').select('*, roadmaps(title_ar, slug)').eq('id', id).single(),
       supabase.from('user_lesson_progress').select('*').eq('user_id', user.id).eq('lesson_id', id).maybeSingle(),

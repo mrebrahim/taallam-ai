@@ -1,66 +1,92 @@
 import { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native'
 import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
+import { getLang } from '@/lib/i18n'
 
 export default function SignupScreen() {
+  const lang = getLang()
+  const isAr = lang === 'ar'
+
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSignup = async () => {
-    if (!fullName || !email || !password) { Alert.alert('خطأ', 'أكمل جميع البيانات'); return }
-    if (password.length < 6) { Alert.alert('خطأ', 'كلمة المرور 6 أحرف على الأقل'); return }
+    if (!fullName || !email || !password) {
+      Alert.alert(isAr ? 'خطأ' : 'Error', isAr ? 'ادخل كل البيانات' : 'Fill all fields')
+      return
+    }
+    if (password.length < 6) {
+      Alert.alert(isAr ? 'خطأ' : 'Error', isAr ? 'كلمة المرور 6 أحرف على الأقل' : 'Password must be at least 6 characters')
+      return
+    }
     setLoading(true)
     const { error } = await supabase.auth.signUp({
-      email, password,
+      email: email.trim(),
+      password,
       options: { data: { full_name: fullName } }
     })
     setLoading(false)
-    if (error) Alert.alert('خطأ', error.message)
-    else Alert.alert('تم!', 'تحقق من بريدك لتأكيد الحساب', [{ text: 'حسناً', onPress: () => router.back() }])
+    if (error) {
+      Alert.alert(isAr ? 'خطأ' : 'Error', error.message)
+    } else {
+      Alert.alert(
+        isAr ? '✅ تم إنشاء الحساب' : '✅ Account Created',
+        isAr ? 'تحقق من إيميلك لتأكيد الحساب' : 'Check your email to confirm your account',
+        [{ text: isAr ? 'حسناً' : 'OK', onPress: () => router.replace('/(auth)/login') }]
+      )
+    }
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← رجوع</Text>
+    <View style={s.container}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Text style={s.backText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>إنشاء حساب جديد 🚀</Text>
-        <View style={styles.form}>
-          {[
-            { label: 'الاسم الكامل', value: fullName, set: setFullName, type: 'default' as const },
-            { label: 'البريد الإلكتروني', value: email, set: setEmail, type: 'email-address' as const },
-            { label: 'كلمة المرور', value: password, set: setPassword, type: 'default' as const, secure: true },
-          ].map((f, i) => (
-            <View key={i}>
-              <Text style={styles.label}>{f.label}</Text>
-              <TextInput style={styles.input} value={f.value} onChangeText={f.set}
-                keyboardType={f.type} secureTextEntry={f.secure} autoCapitalize="none" textAlign="right"
-                placeholder={f.label} placeholderTextColor={Colors.textMuted} />
-            </View>
-          ))}
-          <TouchableOpacity style={[styles.btn, loading && { opacity: 0.6 }]} onPress={handleSignup} disabled={loading}>
-            <Text style={styles.btnText}>{loading ? 'جاري...' : 'إنشاء الحساب'}</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <Text style={s.title}>{isAr ? 'إنشاء حساب جديد' : 'Create Account'}</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <TextInput style={s.input} placeholder={isAr ? 'الاسم الكامل' : 'Full Name'}
+        placeholderTextColor="#64748b" value={fullName} onChangeText={setFullName}
+        textAlign={isAr ? 'right' : 'left'} />
+      <TextInput style={s.input} placeholder={isAr ? 'البريد الإلكتروني' : 'Email'}
+        placeholderTextColor="#64748b" value={email} onChangeText={setEmail}
+        keyboardType="email-address" autoCapitalize="none" textAlign={isAr ? 'right' : 'left'} />
+      <TextInput style={s.input} placeholder={isAr ? 'كلمة المرور (6+ أحرف)' : 'Password (6+ chars)'}
+        placeholderTextColor="#64748b" value={password} onChangeText={setPassword}
+        secureTextEntry textAlign={isAr ? 'right' : 'left'} />
+
+      <TouchableOpacity style={[s.btn, loading && { opacity: 0.7 }]} onPress={handleSignup} disabled={loading}>
+        {loading
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={s.btnText}>{isAr ? 'إنشاء الحساب' : 'Create Account'}</Text>}
+      </TouchableOpacity>
+
+      <View style={s.footer}>
+        <Text style={s.footerText}>{isAr ? 'عندك حساب؟ ' : 'Have an account? '}</Text>
+        <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
+          <Text style={s.footerLink}>{isAr ? 'سجل دخول' : 'Login'}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
-  scroll: { flexGrow: 1, padding: 24, paddingTop: 60 },
-  back: { marginBottom: 24 },
-  backText: { color: Colors.blue, fontSize: 16, fontWeight: '600' },
-  title: { fontSize: 26, fontWeight: '900', color: Colors.text, marginBottom: 32, textAlign: 'right' },
-  form: { gap: 16 },
-  label: { fontSize: 13, color: Colors.textSub, marginBottom: 6, textAlign: 'right', fontWeight: '600' },
-  input: { backgroundColor: Colors.card, borderRadius: 12, padding: 14, fontSize: 15, color: Colors.text, borderWidth: 2, borderColor: Colors.border },
-  btn: { backgroundColor: Colors.green, borderRadius: 14, padding: 18, alignItems: 'center', marginTop: 8, shadowColor: Colors.green, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 },
-  btnText: { color: '#fff', fontSize: 18, fontWeight: '900' },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0f172a', padding: 24 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 40, marginBottom: 32 },
+  backBtn: { width: 40, height: 40, justifyContent: 'center' },
+  backText: { fontSize: 22, color: Colors.blue, fontWeight: '700' },
+  title: { fontSize: 18, fontWeight: '900', color: '#fff' },
+  input: { backgroundColor: '#1e293b', borderRadius: 12, padding: 16, fontSize: 15, color: '#fff', borderWidth: 2, borderColor: '#334155', marginBottom: 12 },
+  btn: { backgroundColor: Colors.green, borderRadius: 14, padding: 17, alignItems: 'center', marginTop: 8, shadowColor: Colors.green, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
+  btnText: { fontSize: 16, fontWeight: '900', color: '#fff' },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
+  footerText: { color: '#64748b', fontSize: 14 },
+  footerLink: { color: Colors.blue, fontSize: 14, fontWeight: '700' },
 })

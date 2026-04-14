@@ -4,12 +4,15 @@ import { router } from 'expo-router'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Colors, ROADMAP_META } from '@/constants/Colors'
+import { getLang } from '@/lib/i18n'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 const QUOTES = ['هتبقى محترف قريباً! 🚀','كل يوم خطوة للأمام! 💪','إنت بتعمل حاجة عظيمة! ⭐','لا تكسر الـ streak! 🔥']
 
 export default function HomeScreen() {
   const { user, loading } = useAuth()
+  const lang = getLang()
+  const isAr = lang === 'ar'
   const [roadmaps, setRoadmaps] = useState<any[]>([])
   const [enrollments, setEnrollments] = useState<Set<string>>(new Set())
   const [progress, setProgress] = useState<Record<string, any>>({})

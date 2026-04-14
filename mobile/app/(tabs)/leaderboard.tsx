@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
+import { getLang } from '@/lib/i18n'
 
 type Period = 'weekly' | 'monthly' | 'all_time'
 
@@ -32,6 +33,8 @@ const MEDALS = ['🥇','🥈','🥉']
 
 export default function LeaderboardScreen() {
   const { user } = useAuth()
+  const lang = getLang()
+  const isAr = lang === 'ar'
   const [period, setPeriod] = useState<Period>('weekly')
   const [entries, setEntries] = useState<any[]>([])
 
@@ -64,15 +67,15 @@ export default function LeaderboardScreen() {
     <SafeAreaView style={s.container} edges={['top']}>
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.title}>🏆 الترتيب</Text>
-        {myRank > 0 && <View style={s.rankBadge}><Text style={s.rankText}>ترتيبك: #{myRank}</Text></View>}
+        <Text style={s.title}>🏆 {isAr ? 'الترتيب' : 'Leaderboard'}</Text>
+        {myRank > 0 && <View style={s.rankBadge}><Text style={s.rankText}>{isAr ? 'ترتيبك' : 'Your Rank'}: #{myRank}</Text></View>}
       </View>
 
       {/* Period tabs */}
       <View style={s.tabs}>
         {(['weekly','monthly','all_time'] as Period[]).map((p, i) => (
           <TouchableOpacity key={p} style={[s.tab, period===p && s.tabActive]} onPress={() => setPeriod(p)}>
-            <Text style={[s.tabText, period===p && s.tabTextActive]}>{['هذا الأسبوع','هذا الشهر','كل الوقت'][i]}</Text>
+            <Text style={[s.tabText, period===p && s.tabTextActive]}>{isAr ? ['هذا الأسبوع','هذا الشهر','كل الوقت'][i] : ['This Week','This Month','All Time'][i]}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -156,7 +159,7 @@ const s = StyleSheet.create({
   podium: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 8, marginBottom: 20 },
   podiumItem: { alignItems: 'center', flex: 1 },
   podiumName: { fontSize: 11, fontWeight: '700', color: Colors.text, marginVertical: 4, textAlign: 'center' },
-  podiumBar: { width: '100%', borderRadius: '10 10 0 0' as any, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, gap: 2 },
+  podiumBar: { width: '100%', borderTopLeftRadius: 10, borderTopRightRadius: 10, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, gap: 2 },
   podiumXP: { fontSize: 12, fontWeight: '900', color: '#fff' },
   row: { backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 2, borderColor: Colors.border },
   rowMe: { backgroundColor: '#DDF4FF', borderColor: Colors.blue },

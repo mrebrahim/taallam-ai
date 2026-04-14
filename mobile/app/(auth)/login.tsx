@@ -1,116 +1,130 @@
 import { useState } from 'react'
-import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, Alert, Image
-} from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native'
 import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
-import { StatusBar } from 'expo-status-bar'
+import { getLang } from '@/lib/i18n'
 
 export default function LoginScreen() {
+  const lang = getLang()
+  const isAr = lang === 'ar'
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const handleLogin = async () => {
-    if (!email || !password) { Alert.alert('خطأ', 'أدخل البريد الإلكتروني وكلمة المرور'); return }
+    if (!email || !password) {
+      Alert.alert(isAr ? 'خطأ' : 'Error', isAr ? 'ادخل الإيميل وكلمة المرور' : 'Enter email and password')
+      return
+    }
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
     setLoading(false)
-    if (error) Alert.alert('خطأ', 'البريد الإلكتروني أو كلمة المرور غلط')
-    else router.replace('/(tabs)/home')
+    if (error) {
+      Alert.alert(isAr ? 'خطأ' : 'Error', isAr ? 'الإيميل أو كلمة المرور غلط' : 'Invalid email or password')
+    } else {
+      router.replace('/(tabs)/home')
+    }
+  }
+
+  const handleGoogle = async () => {
+    setGoogleLoading(true)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'taallam://auth/callback',
+        skipBrowserRedirect: false,
+      },
+    })
+    setGoogleLoading(false)
+    if (error) Alert.alert('Error', error.message)
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <StatusBar style="dark" />
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <View style={s.container}>
+      {/* Logo */}
+      <View style={s.logo}>
+        <Text style={s.logoEmoji}>🤖</Text>
+        <Text style={s.logoText}>Taallam AI</Text>
+        <Text style={s.logoSub}>
+          {isAr ? 'ابدأ رحلة التعلم اليومية' : 'Start your daily learning journey'}
+        </Text>
+      </View>
 
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoEmoji}>🦉</Text>
-          <Text style={styles.logoTitle}>Taallam AI</Text>
-          <Text style={styles.logoSub}>ابدأ رحلة التعلم اليومية</Text>
-        </View>
+      {/* Google Button */}
+      <TouchableOpacity style={s.googleBtn} onPress={handleGoogle} disabled={googleLoading}>
+        <Text style={s.googleIcon}>G</Text>
+        <Text style={s.googleText}>
+          {googleLoading
+            ? (isAr ? 'جاري...' : 'Loading...')
+            : (isAr ? 'الدخول بـ Google' : 'Continue with Google')}
+        </Text>
+      </TouchableOpacity>
 
-        {/* Form */}
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="البريد الإلكتروني"
-            placeholderTextColor={Colors.textMuted}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            textAlign="right"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="كلمة المرور"
-            placeholderTextColor={Colors.textMuted}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textAlign="right"
-          />
+      {/* Divider */}
+      <View style={s.divider}>
+        <View style={s.dividerLine} />
+        <Text style={s.dividerText}>{isAr ? 'أو' : 'or'}</Text>
+        <View style={s.dividerLine} />
+      </View>
 
-          <TouchableOpacity
-            style={[styles.btn, loading && styles.btnDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.btnText}>{loading ? 'جاري...' : 'تسجيل الدخول'}</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Email + Password */}
+      <TextInput
+        style={s.input}
+        placeholder={isAr ? 'البريد الإلكتروني' : 'Email'}
+        placeholderTextColor="#64748b"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        textAlign={isAr ? 'right' : 'left'}
+      />
+      <TextInput
+        style={s.input}
+        placeholder={isAr ? 'كلمة المرور' : 'Password'}
+        placeholderTextColor="#64748b"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        textAlign={isAr ? 'right' : 'left'}
+      />
 
-        {/* Sign up link */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>مالكش حساب؟ </Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-            <Text style={styles.footerLink}>سجل دلوقتي</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Login Button */}
+      <TouchableOpacity style={[s.btn, loading && { opacity: 0.7 }]} onPress={handleLogin} disabled={loading}>
+        {loading
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={s.btnText}>{isAr ? 'تسجيل الدخول' : 'Login'}</Text>}
+      </TouchableOpacity>
 
-      </ScrollView>
-    </KeyboardAvoidingView>
+      {/* Signup Link */}
+      <View style={s.footer}>
+        <Text style={s.footerText}>{isAr ? 'مالكش حساب؟ ' : "Don't have an account? "}</Text>
+        <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+          <Text style={s.footerLink}>{isAr ? 'سجل دلوقتي' : 'Sign up'}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  logoContainer: { alignItems: 'center', marginBottom: 48 },
-  logoEmoji: { fontSize: 72, marginBottom: 12 },
-  logoTitle: { fontSize: 28, fontWeight: '900', color: Colors.green, marginBottom: 6 },
-  logoSub: { fontSize: 16, color: Colors.textSub },
-  form: { gap: 12, marginBottom: 24 },
-  input: {
-    backgroundColor: Colors.card,
-    borderRadius: 14,
-    padding: 16,
-    fontSize: 16,
-    color: Colors.text,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
-  },
-  btn: {
-    backgroundColor: Colors.green,
-    borderRadius: 14,
-    padding: 18,
-    alignItems: 'center',
-    shadowColor: Colors.green,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  btnDisabled: { backgroundColor: Colors.textMuted },
-  btnText: { color: '#fff', fontSize: 18, fontWeight: '900' },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0f172a', padding: 24, justifyContent: 'center' },
+  logo: { alignItems: 'center', marginBottom: 36 },
+  logoEmoji: { fontSize: 56, marginBottom: 10 },
+  logoText: { fontSize: 24, fontWeight: '900', color: '#fff', marginBottom: 6 },
+  logoSub: { fontSize: 14, color: '#64748b', textAlign: 'center' },
+  googleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16 },
+  googleIcon: { fontSize: 20, fontWeight: '900', color: '#4285F4' },
+  googleText: { fontSize: 15, fontWeight: '700', color: '#333' },
+  divider: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 10 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#334155' },
+  dividerText: { color: '#64748b', fontSize: 13 },
+  input: { backgroundColor: '#1e293b', borderRadius: 12, padding: 16, fontSize: 15, color: '#fff', borderWidth: 2, borderColor: '#334155', marginBottom: 12 },
+  btn: { backgroundColor: Colors.blue, borderRadius: 14, padding: 17, alignItems: 'center', marginBottom: 16, shadowColor: Colors.blue, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
+  btnText: { fontSize: 16, fontWeight: '900', color: '#fff' },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  footerText: { color: Colors.textSub, fontSize: 14 },
+  footerText: { color: '#64748b', fontSize: 14 },
   footerLink: { color: Colors.blue, fontSize: 14, fontWeight: '700' },
 })

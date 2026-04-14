@@ -37,6 +37,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="lesson/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         <Stack.Screen name="sadaqat/index" options={{ headerShown: false }} />
         <Stack.Screen name="sadaqat/[id]" options={{ headerShown: false }} />
       </Stack>
