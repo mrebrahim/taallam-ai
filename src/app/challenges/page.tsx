@@ -216,6 +216,18 @@ export default function ChallengesPage() {
           </div>
         </div>
 
+        {/* Sadaqat Al-Ilm Banner */}
+        <Link href="/sadaqat" style={{ textDecoration:'none', display:'block', marginBottom:16 }}>
+          <div style={{ background:'linear-gradient(135deg, #1e293b, #334155)', borderRadius:18, padding:'14px 18px', display:'flex', alignItems:'center', gap:12 }}>
+            <span style={{ fontSize:32 }}>📿</span>
+            <div>
+              <div style={{ fontWeight:800, color:'#fff', fontSize:15 }}>صدقة العلم</div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)', marginTop:2 }}>حل التحديات مع زملائك واكسب XP أكتر!</div>
+            </div>
+            <span style={{ marginRight:'auto', color:'#FF9600', fontSize:18 }}>←</span>
+          </div>
+        </Link>
+
         {challenges.length === 0 ? (
           <div style={{background:'#fff',borderRadius:20,padding:'48px 24px',textAlign:'center',border:'2px solid #f0f0f0'}}>
             <div style={{fontSize:52,marginBottom:12}}>🔜</div>

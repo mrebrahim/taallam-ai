@@ -115,6 +115,18 @@ export default function LearnPage() {
 
       {/* Roadmap Tabs */}
       <div style={{ display:'flex', gap:8, padding:'16px 16px 0', overflowX:'auto' }}>
+        {/* Sadaqat Al-Ilm Banner */}
+        <Link href="/sadaqat" style={{ textDecoration:'none', display:'block', marginBottom:16 }}>
+          <div style={{ background:'linear-gradient(135deg, #1e293b, #334155)', borderRadius:18, padding:'14px 18px', display:'flex', alignItems:'center', gap:12 }}>
+            <span style={{ fontSize:32 }}>📿</span>
+            <div>
+              <div style={{ fontWeight:800, color:'#fff', fontSize:15 }}>صدقة العلم</div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,0.6)', marginTop:2 }}>ادرس مع زملائك وشارك المعرفة!</div>
+            </div>
+            <span style={{ marginRight:'auto', color:'#FF9600', fontSize:18 }}>←</span>
+          </div>
+        </Link>
+
         {roadmaps.map(r => {
           const m = ROADMAP_META[r.slug]
           const active = selectedRoadmap === r.slug
