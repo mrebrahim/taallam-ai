@@ -17,9 +17,9 @@
       "bundleIdentifier": "com.ibrahimschool.taallam",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "عشان ترفع screenshots للتحديات",
-        "NSPhotoLibraryUsageDescription": "عشان ترفع صور للتحديات",
-        "NSUserNotificationUsageDescription": "عشان نبعتلك تذكير بدرسك اليومي وتحافظ على الـ streak"
+        "NSCameraUsageDescription": "\u0639\u0634\u0627\u0646 \u062a\u0631\u0641\u0639 screenshots \u0644\u0644\u062a\u062d\u062f\u064a\u0627\u062a",
+        "NSPhotoLibraryUsageDescription": "\u0639\u0634\u0627\u0646 \u062a\u0631\u0641\u0639 \u0635\u0648\u0631 \u0644\u0644\u062a\u062d\u062f\u064a\u0627\u062a",
+        "NSUserNotificationUsageDescription": "\u0639\u0634\u0627\u0646 \u0646\u0628\u0639\u062a\u0644\u0643 \u062a\u0630\u0643\u064a\u0631 \u0628\u062f\u0631\u0633\u0643 \u0627\u0644\u064a\u0648\u0645\u064a \u0648\u062a\u062d\u0627\u0641\u0638 \u0639\u0644\u0649 \u0627\u0644\u0640 streak"
       }
     },
     "android": {
@@ -38,21 +38,7 @@
       ]
     },
     "plugins": [
-      "expo-router",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#58CC02",
-          "androidMode": "default"
-        }
-      ],
-      [
-        "expo-av",
-        {
-          "microphonePermission": false
-        }
-      ]
+      "expo-router"
     ],
     "experiments": {
       "typedRoutes": true
