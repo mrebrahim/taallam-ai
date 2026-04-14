@@ -104,10 +104,10 @@ export default function LessonScreen() {
       const { data, error } = await supabase
         .from('lessons')
         .select(`
-          id, title_ar, title, description_ar, description,
+          id, title_ar, description_ar,
           lesson_type, video_url, vimeo_id, vimeo_url,
           video_duration_seconds, xp_reward, is_free, roadmap_id,
-          roadmaps (title_ar, title, slug)
+          roadmaps (title_ar, slug)
         `)
         .eq('id', id)
         .single()
