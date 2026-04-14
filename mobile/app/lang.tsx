@@ -1,74 +1,60 @@
 import { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, I18nManager } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { router } from 'expo-router'
-import { saveLang, type Lang } from '@/lib/i18n'
+import { useLang } from '@/lib/LanguageContext'
+import { type Lang } from '@/lib/i18n'
 import { Colors } from '@/constants/Colors'
 
 export default function LangScreen() {
-  const [selected, setSelected] = useState<Lang>('ar')
+  const { lang, changeLang } = useLang()
+  const [selected, setSelected] = useState<Lang>(lang || 'ar')
 
   const handleContinue = async () => {
-    await saveLang(selected)
+    await changeLang(selected)
     router.replace('/(auth)/login')
   }
 
   return (
     <View style={s.container}>
-      {/* Logo */}
-      <View style={s.logoArea}>
-        <Text style={s.logo}>🤖</Text>
+      <View style={s.logo}>
+        <Text style={s.emoji}>🤖</Text>
         <Text style={s.appName}>Taallam AI</Text>
-        <Text style={s.appNameAr}>تعلّم AI</Text>
+        <Text style={s.appAr}>تعلّم AI</Text>
       </View>
 
-      {/* Title */}
       <Text style={s.title}>
         {selected === 'ar' ? 'اختر لغتك' : 'Choose Your Language'}
       </Text>
-      <Text style={s.subtitle}>
+      <Text style={s.sub}>
         {selected === 'ar'
           ? 'يمكنك تغييرها لاحقاً من الملف الشخصي'
           : 'You can change this later in your profile'}
       </Text>
 
-      {/* Language Options */}
-      <View style={s.options}>
-        <TouchableOpacity
-          style={[s.option, selected === 'ar' && s.optionActive]}
-          onPress={() => setSelected('ar')}
-        >
-          <Text style={s.optionFlag}>🇸🇦</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.optionLang, selected === 'ar' && { color: Colors.blue }]}>
-              العربية
-            </Text>
-            <Text style={s.optionSub}>Arabic</Text>
-          </View>
-          <View style={[s.radio, selected === 'ar' && s.radioActive]}>
-            {selected === 'ar' && <View style={s.radioDot} />}
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[s.option, selected === 'en' && s.optionActive]}
-          onPress={() => setSelected('en')}
-        >
-          <Text style={s.optionFlag}>🇺🇸</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.optionLang, selected === 'en' && { color: Colors.blue }]}>
-              English
-            </Text>
-            <Text style={s.optionSub}>الإنجليزية</Text>
-          </View>
-          <View style={[s.radio, selected === 'en' && s.radioActive]}>
-            {selected === 'en' && <View style={s.radioDot} />}
-          </View>
-        </TouchableOpacity>
+      <View style={s.opts}>
+        {([
+          ['ar', '🇸🇦', 'العربية', 'Arabic'],
+          ['en', '🇺🇸', 'English', 'الإنجليزية'],
+        ] as [Lang, string, string, string][]).map(([l, flag, name, sub]) => (
+          <TouchableOpacity
+            key={l}
+            style={[s.opt, selected === l && s.optActive]}
+            onPress={() => setSelected(l)}
+          >
+            <Text style={s.flag}>{flag}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.optName, selected === l && { color: Colors.blue }]}>{name}</Text>
+              <Text style={s.optSub}>{sub}</Text>
+            </View>
+            <View style={[s.radio, selected === l && s.radioOn]}>
+              {selected === l && <View style={s.dot} />}
+            </View>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {/* Continue Button */}
       <TouchableOpacity style={s.btn} onPress={handleContinue}>
-        <Text style={s.btnText}>
+        <Text style={s.btnTxt}>
           {selected === 'ar' ? 'متابعة ←' : 'Continue →'}
         </Text>
       </TouchableOpacity>
@@ -78,21 +64,21 @@ export default function LangScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f172a', alignItems: 'center', justifyContent: 'center', padding: 28 },
-  logoArea: { alignItems: 'center', marginBottom: 40 },
-  logo: { fontSize: 72, marginBottom: 12 },
-  appName: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: 1 },
-  appNameAr: { fontSize: 18, fontWeight: '700', color: Colors.green, marginTop: 4 },
-  title: { fontSize: 24, fontWeight: '900', color: '#fff', marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 14, color: '#94a3b8', marginBottom: 36, textAlign: 'center' },
-  options: { width: '100%', gap: 14, marginBottom: 36 },
-  option: { backgroundColor: '#1e293b', borderRadius: 18, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 2, borderColor: '#334155' },
-  optionActive: { borderColor: Colors.blue, backgroundColor: '#1e3a5f' },
-  optionFlag: { fontSize: 36 },
-  optionLang: { fontSize: 18, fontWeight: '800', color: '#fff' },
-  optionSub: { fontSize: 13, color: '#64748b', marginTop: 2 },
+  logo: { alignItems: 'center', marginBottom: 40 },
+  emoji: { fontSize: 72, marginBottom: 12 },
+  appName: { fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: 1 },
+  appAr: { fontSize: 18, fontWeight: '700', color: Colors.green, marginTop: 4 },
+  title: { fontSize: 26, fontWeight: '900', color: '#fff', marginBottom: 8, textAlign: 'center' },
+  sub: { fontSize: 14, color: '#64748b', marginBottom: 36, textAlign: 'center' },
+  opts: { width: '100%', gap: 14, marginBottom: 36 },
+  opt: { backgroundColor: '#1e293b', borderRadius: 18, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 2, borderColor: '#334155' },
+  optActive: { borderColor: Colors.blue, backgroundColor: '#1e3a5f' },
+  flag: { fontSize: 38 },
+  optName: { fontSize: 19, fontWeight: '800', color: '#fff' },
+  optSub: { fontSize: 13, color: '#64748b', marginTop: 2 },
   radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#475569', alignItems: 'center', justifyContent: 'center' },
-  radioActive: { borderColor: Colors.blue },
-  radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.blue },
+  radioOn: { borderColor: Colors.blue },
+  dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.blue },
   btn: { width: '100%', backgroundColor: Colors.blue, borderRadius: 16, padding: 18, alignItems: 'center', shadowColor: Colors.blue, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
-  btnText: { fontSize: 17, fontWeight: '900', color: '#fff' },
+  btnTxt: { fontSize: 17, fontWeight: '900', color: '#fff' },
 })

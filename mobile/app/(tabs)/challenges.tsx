@@ -5,7 +5,7 @@ import { router } from 'expo-router'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
-import { getLang } from '@/lib/i18n'
+import { useLang } from '@/lib/LanguageContext'
 
 const DIFF_LABELS_AR = ['', 'سهل', 'متوسط', 'صعب', 'خبير', 'أسطوري']
 const DIFF_LABELS_EN = ['', 'Easy', 'Medium', 'Hard', 'Expert', 'Legendary']
@@ -13,8 +13,7 @@ const DIFF_COLORS = ['', Colors.green, Colors.blue, Colors.orange, Colors.purple
 
 export default function ChallengesScreen() {
   const { user } = useAuth()
-  const lang = getLang()
-  const isAr = lang === 'ar'
+  const { isAr } = useLang()
   const DIFF_LABELS = isAr ? DIFF_LABELS_AR : DIFF_LABELS_EN
 
   const [challenges, setChallenges] = useState<any[]>([])

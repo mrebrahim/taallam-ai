@@ -1,9 +1,7 @@
 import { Tabs } from 'expo-router'
 import { View, Text, StyleSheet, Platform } from 'react-native'
 import { Colors } from '@/constants/Colors'
-import { getLang, t } from '@/lib/i18n'
-import { useState, useEffect } from 'react'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import { useLang } from '@/lib/LanguageContext'
 
 function TabIcon({ emoji, label, active }: { emoji: string; label: string; active: boolean }) {
   return (
@@ -16,15 +14,7 @@ function TabIcon({ emoji, label, active }: { emoji: string; label: string; activ
 }
 
 export default function TabsLayout() {
-  const [lang, setLang] = useState(getLang())
-
-  useEffect(() => {
-    AsyncStorage.getItem('@taallam_lang').then(l => {
-      if (l) setLang(l as any)
-    })
-  }, [])
-
-  const isAr = lang === 'ar'
+  const { isAr } = useLang()
 
   return (
     <Tabs

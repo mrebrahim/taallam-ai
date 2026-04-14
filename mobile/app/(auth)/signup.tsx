@@ -3,11 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
-import { getLang } from '@/lib/i18n'
+import { useLang } from '@/lib/LanguageContext'
 
 export default function SignupScreen() {
-  const lang = getLang()
-  const isAr = lang === 'ar'
+  const { isAr } = useLang()
 
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')

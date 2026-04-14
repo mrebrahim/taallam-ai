@@ -1,46 +1,69 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import * as SplashScreen from 'expo-splash-screen'
-import { loadLang } from '@/lib/i18n'
+import { LangProvider, useLang } from '@/lib/LanguageContext'
 import { router } from 'expo-router'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import { supabase } from '@/lib/supabase'
+import { View, ActivityIndicator } from 'react-native'
+import { Colors } from '@/constants/Colors'
 
 SplashScreen.preventAutoHideAsync()
 
-export default function RootLayout() {
-  const [ready, setReady] = useState(false)
+function AppNavigator() {
+  const { loading, chosen } = useLang()
 
   useEffect(() => {
-    const init = async () => {
-      const { lang, chosen } = await loadLang()
-      // Check auth session
-      const { createClient } = await import('@/lib/supabase')
+    if (loading) return
 
-      // We just need to know if lang was chosen before
-      // Navigation happens in index.tsx based on session
-      setReady(true)
+    const init = async () => {
       await SplashScreen.hideAsync()
+
+      if (!chosen) {
+        router.replace('/lang')
+        return
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        router.replace('/(tabs)/home')
+      } else {
+        router.replace('/(auth)/login')
+      }
     }
     init()
-  }, [])
+  }, [loading, chosen])
 
-  if (!ready) return null
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' }}>
+        <ActivityIndicator color={Colors.green} size="large" />
+      </View>
+    )
+  }
 
+  return (
+    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="lang" />
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="auth/callback" />
+      <Stack.Screen name="lesson/[id]" options={{ presentation: 'card', animation: 'slide_from_right' }} />
+      <Stack.Screen name="sadaqat/index" />
+      <Stack.Screen name="sadaqat/[id]" />
+    </Stack>
+  )
+}
+
+export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="lang" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="lesson/[id]" options={{ presentation: 'card' }} />
-        <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
-        <Stack.Screen name="sadaqat/index" options={{ headerShown: false }} />
-        <Stack.Screen name="sadaqat/[id]" options={{ headerShown: false }} />
-      </Stack>
+      <LangProvider>
+        <AppNavigator />
+      </LangProvider>
     </GestureHandlerRootView>
   )
 }

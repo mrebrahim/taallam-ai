@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
-import { getLang } from '@/lib/i18n'
+import { useLang } from '@/lib/LanguageContext'
 
 type Period = 'weekly' | 'monthly' | 'all_time'
 
@@ -33,8 +33,7 @@ const MEDALS = ['🥇','🥈','🥉']
 
 export default function LeaderboardScreen() {
   const { user } = useAuth()
-  const lang = getLang()
-  const isAr = lang === 'ar'
+  const { isAr } = useLang()
   const [period, setPeriod] = useState<Period>('weekly')
   const [entries, setEntries] = useState<any[]>([])
 

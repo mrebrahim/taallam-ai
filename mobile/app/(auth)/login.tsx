@@ -1,44 +1,48 @@
 import { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native'
+import {
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, Alert, ActivityIndicator
+} from 'react-native'
 import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
-import { getLang } from '@/lib/i18n'
+import { useLang } from '@/lib/LanguageContext'
 
 export default function LoginScreen() {
-  const lang = getLang()
-  const isAr = lang === 'ar'
-
-  const [email, setEmail] = useState('')
+  const { isAr } = useLang()
+  const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
+  const [loading, setLoading]   = useState(false)
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert(isAr ? 'خطأ' : 'Error', isAr ? 'ادخل الإيميل وكلمة المرور' : 'Enter email and password')
+    if (!email.trim() || !password) {
+      Alert.alert(
+        isAr ? 'تنبيه' : 'Alert',
+        isAr ? 'ادخل الإيميل وكلمة المرور' : 'Enter email and password'
+      )
       return
     }
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    })
     setLoading(false)
     if (error) {
-      Alert.alert(isAr ? 'خطأ' : 'Error', isAr ? 'الإيميل أو كلمة المرور غلط' : 'Invalid email or password')
+      Alert.alert(
+        isAr ? 'خطأ' : 'Error',
+        isAr ? 'الإيميل أو كلمة المرور غلط' : 'Wrong email or password'
+      )
     } else {
       router.replace('/(tabs)/home')
     }
   }
 
   const handleGoogle = async () => {
-    setGoogleLoading(true)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: 'taallam://auth/callback',
-        skipBrowserRedirect: false,
-      },
+      options: { redirectTo: 'taallam://auth/callback' },
     })
-    setGoogleLoading(false)
     if (error) Alert.alert('Error', error.message)
   }
 
@@ -47,39 +51,38 @@ export default function LoginScreen() {
       {/* Logo */}
       <View style={s.logo}>
         <Text style={s.logoEmoji}>🤖</Text>
-        <Text style={s.logoText}>Taallam AI</Text>
+        <Text style={s.logoName}>Taallam AI</Text>
         <Text style={s.logoSub}>
           {isAr ? 'ابدأ رحلة التعلم اليومية' : 'Start your daily learning journey'}
         </Text>
       </View>
 
-      {/* Google Button */}
-      <TouchableOpacity style={s.googleBtn} onPress={handleGoogle} disabled={googleLoading}>
-        <Text style={s.googleIcon}>G</Text>
+      {/* Google */}
+      <TouchableOpacity style={s.googleBtn} onPress={handleGoogle}>
+        <Text style={s.googleG}>G</Text>
         <Text style={s.googleText}>
-          {googleLoading
-            ? (isAr ? 'جاري...' : 'Loading...')
-            : (isAr ? 'الدخول بـ Google' : 'Continue with Google')}
+          {isAr ? 'الدخول بـ Google' : 'Continue with Google'}
         </Text>
       </TouchableOpacity>
 
       {/* Divider */}
       <View style={s.divider}>
-        <View style={s.dividerLine} />
-        <Text style={s.dividerText}>{isAr ? 'أو' : 'or'}</Text>
-        <View style={s.dividerLine} />
+        <View style={s.line} />
+        <Text style={s.divTxt}>{isAr ? 'أو' : 'or'}</Text>
+        <View style={s.line} />
       </View>
 
-      {/* Email + Password */}
+      {/* Fields */}
       <TextInput
         style={s.input}
-        placeholder={isAr ? 'البريد الإلكتروني' : 'Email'}
+        placeholder={isAr ? 'البريد الإلكتروني' : 'Email address'}
         placeholderTextColor="#64748b"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
         textAlign={isAr ? 'right' : 'left'}
+        textContentType="emailAddress"
       />
       <TextInput
         style={s.input}
@@ -89,18 +92,25 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         secureTextEntry
         textAlign={isAr ? 'right' : 'left'}
+        textContentType="password"
       />
 
       {/* Login Button */}
-      <TouchableOpacity style={[s.btn, loading && { opacity: 0.7 }]} onPress={handleLogin} disabled={loading}>
+      <TouchableOpacity
+        style={[s.btn, loading && { opacity: 0.7 }]}
+        onPress={handleLogin}
+        disabled={loading}
+      >
         {loading
           ? <ActivityIndicator color="#fff" />
-          : <Text style={s.btnText}>{isAr ? 'تسجيل الدخول' : 'Login'}</Text>}
+          : <Text style={s.btnTxt}>{isAr ? 'تسجيل الدخول' : 'Login'}</Text>}
       </TouchableOpacity>
 
-      {/* Signup Link */}
+      {/* Signup */}
       <View style={s.footer}>
-        <Text style={s.footerText}>{isAr ? 'مالكش حساب؟ ' : "Don't have an account? "}</Text>
+        <Text style={s.footerTxt}>
+          {isAr ? 'مالكش حساب؟ ' : "Don't have an account? "}
+        </Text>
         <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
           <Text style={s.footerLink}>{isAr ? 'سجل دلوقتي' : 'Sign up'}</Text>
         </TouchableOpacity>
@@ -110,21 +120,32 @@ export default function LoginScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', padding: 24, justifyContent: 'center' },
-  logo: { alignItems: 'center', marginBottom: 36 },
-  logoEmoji: { fontSize: 56, marginBottom: 10 },
-  logoText: { fontSize: 24, fontWeight: '900', color: '#fff', marginBottom: 6 },
+  container: { flex: 1, backgroundColor: '#0f172a', padding: 28, justifyContent: 'center' },
+  logo: { alignItems: 'center', marginBottom: 40 },
+  logoEmoji: { fontSize: 64, marginBottom: 12 },
+  logoName: { fontSize: 26, fontWeight: '900', color: '#fff', marginBottom: 6, letterSpacing: 1 },
   logoSub: { fontSize: 14, color: '#64748b', textAlign: 'center' },
-  googleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16 },
-  googleIcon: { fontSize: 20, fontWeight: '900', color: '#4285F4' },
+  googleBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 12, backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 18,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, elevation: 3,
+  },
+  googleG: { fontSize: 20, fontWeight: '900', color: '#4285F4' },
   googleText: { fontSize: 15, fontWeight: '700', color: '#333' },
-  divider: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 10 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#334155' },
-  dividerText: { color: '#64748b', fontSize: 13 },
-  input: { backgroundColor: '#1e293b', borderRadius: 12, padding: 16, fontSize: 15, color: '#fff', borderWidth: 2, borderColor: '#334155', marginBottom: 12 },
-  btn: { backgroundColor: Colors.blue, borderRadius: 14, padding: 17, alignItems: 'center', marginBottom: 16, shadowColor: Colors.blue, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
-  btnText: { fontSize: 16, fontWeight: '900', color: '#fff' },
+  divider: { flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 10 },
+  line: { flex: 1, height: 1, backgroundColor: '#1e293b' },
+  divTxt: { color: '#475569', fontSize: 13 },
+  input: {
+    backgroundColor: '#1e293b', borderRadius: 12, padding: 16,
+    fontSize: 15, color: '#fff', borderWidth: 2, borderColor: '#334155', marginBottom: 12,
+  },
+  btn: {
+    backgroundColor: Colors.blue, borderRadius: 14, padding: 18,
+    alignItems: 'center', marginTop: 4, marginBottom: 18,
+    shadowColor: Colors.blue, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
+  },
+  btnTxt: { fontSize: 17, fontWeight: '900', color: '#fff' },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  footerText: { color: '#64748b', fontSize: 14 },
-  footerLink: { color: Colors.blue, fontSize: 14, fontWeight: '700' },
+  footerTxt: { color: '#64748b', fontSize: 14 },
+  footerLink: { color: Colors.blue, fontSize: 14, fontWeight: '800' },
 })

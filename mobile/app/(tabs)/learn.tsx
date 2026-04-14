@@ -5,12 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Colors, ROADMAP_META } from '@/constants/Colors'
-import { getLang } from '@/lib/i18n'
+import { useLang } from '@/lib/LanguageContext'
 
 export default function LearnScreen() {
   const { user } = useAuth()
-  const lang = getLang()
-  const isAr = lang === 'ar'
+  const { isAr } = useLang()
   const params = useLocalSearchParams<{ roadmap?: string }>()
   const [roadmaps, setRoadmaps] = useState<any[]>([])
   const [enrollments, setEnrollments] = useState<Set<string>>(new Set())

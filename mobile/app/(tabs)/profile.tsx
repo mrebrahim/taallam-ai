@@ -5,7 +5,8 @@ import { router } from 'expo-router'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
-import { getLang, saveLang, type Lang } from '@/lib/i18n'
+import { useLang } from '@/lib/LanguageContext'
+import { type Lang } from '@/lib/i18n'
 
 const LEVELS = [
   { level:1, name:'مبتدئ',    xp:0,    color:'#94a3b8' },
@@ -27,7 +28,8 @@ function getLvl(xp: number) {
 
 export default function ProfileScreen() {
   const { user } = useAuth()
-  const [lang, setLang] = useState<Lang>(getLang())
+  const { lang, changeLang } = useLang()
+  const isAr = lang === 'ar'
   const [showLangModal, setShowLangModal] = useState(false)
   const [stats, setStats] = useState({ completed_challenges: 0, completed_lessons: 0, groups: 0 })
 
@@ -44,9 +46,8 @@ export default function ProfileScreen() {
     load()
   }, [user])
 
-  const changeLang = async (newLang: Lang) => {
-    await saveLang(newLang)
-    setLang(newLang)
+  const handleChangeLang = async (newLang: Lang) => {
+    await changeLang(newLang)
     setShowLangModal(false)
   }
 
@@ -144,7 +145,7 @@ export default function ProfileScreen() {
               🌐 {lang === 'ar' ? 'اختر اللغة' : 'Choose Language'}
             </Text>
             {([['ar','🇸🇦','العربية','Arabic'],['en','🇺🇸','English','الإنجليزية']] as const).map(([l,flag,name,sub]) => (
-              <TouchableOpacity key={l} onPress={() => changeLang(l)}
+              <TouchableOpacity key={l} onPress={() => handleChangeLang(l)}
                 style={{ flexDirection:'row', alignItems:'center', gap:14, padding:16, borderRadius:14, marginBottom:8, backgroundColor: lang===l ? '#DDF4FF' : '#f7f7f7', borderWidth:2, borderColor: lang===l ? Colors.blue : '#f0f0f0' }}>
                 <Text style={{ fontSize:32 }}>{flag}</Text>
                 <View style={{ flex:1 }}>
