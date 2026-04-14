@@ -24,9 +24,9 @@ export default function EnrollmentsPage() {
       fetch(`${URL2}/rest/v1/users?select=id,full_name,email,username&order=created_at.desc`, { headers: H }).then(r=>r.json()),
       fetch(`${URL2}/rest/v1/roadmaps?select=*&order=sort_order`, { headers: H }).then(r=>r.json()),
     ])
-    setEnrollments(e || [])
-    setUsers(u || [])
-    setRoadmaps(r || [])
+    setEnrollments(Array.isArray(e) ? e : [])
+    setUsers(Array.isArray(u) ? u : [])
+    setRoadmaps(Array.isArray(r) ? r : [])
   }
 
   const enroll = async () => {
