@@ -2,18 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Alert, ActivityIndicator, Platform,
-  AppState, AppStateStatus,
+  AppState, AppStateStatus, NativeModules,
 } from 'react-native'
 import { useLocalSearchParams, router } from 'expo-router'
 import { WebView } from 'react-native-webview'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import * as ScreenCapture from 'expo-screen-capture'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
 
-// ─── Video URL helpers ────────────────────────────────────────
+// ─── Video helpers ────────────────────────────────────────────
 function getYouTubeId(url: string): string | null {
   if (!url) return null
   const patterns = [
@@ -36,25 +35,17 @@ function getVimeoId(input: string): string | null {
   return m ? m[1] : null
 }
 
-// Build full HTML page for WebView — Vimeo first, YouTube fallback
 function buildVideoHTML(lesson: any): string {
   let embedUrl = ''
 
-  // Priority 1: Vimeo ID
   if (lesson.vimeo_id) {
     embedUrl = `https://player.vimeo.com/video/${lesson.vimeo_id}?autoplay=0&title=0&byline=0&portrait=0&dnt=1`
-  }
-  // Priority 2: Vimeo URL
-  else if (lesson.vimeo_url) {
+  } else if (lesson.vimeo_url) {
     const id = getVimeoId(lesson.vimeo_url)
     if (id) embedUrl = `https://player.vimeo.com/video/${id}?autoplay=0&title=0&byline=0&portrait=0&dnt=1`
-  }
-  // Priority 3: YouTube
-  else if (lesson.video_url) {
+  } else if (lesson.video_url) {
     const ytId = getYouTubeId(lesson.video_url)
-    if (ytId) {
-      embedUrl = `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1`
-    }
+    if (ytId) embedUrl = `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1`
   }
 
   if (!embedUrl) return ''
@@ -66,109 +57,60 @@ function buildVideoHTML(lesson: any): string {
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body {
-  background:#000;
-  width:100%; height:100%;
-  overflow:hidden;
-}
-iframe {
-  position:absolute;
-  top:0; left:0;
-  width:100%; height:100%;
-  border:none;
-}
+html, body { background:#000; width:100%; height:100%; overflow:hidden; }
+iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:none; }
 </style>
 </head>
 <body>
 <iframe
   src="${embedUrl}"
   allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-  allowfullscreen
-  webkitallowfullscreen
-  mozallowfullscreen
+  allowfullscreen webkitallowfullscreen mozallowfullscreen
   frameborder="0">
 </iframe>
 </body>
 </html>`
 }
 
-// ─── Component ────────────────────────────────────────────────
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { user } = useAuth()
   const { isAr } = useLang()
 
-  const [lesson, setLesson]         = useState<any>(null)
-  const [loading, setLoading]       = useState(true)
-  const [completed, setCompleted]   = useState(false)
-  const [completing, setCompleting] = useState(false)
-  const [videoError, setVideoError] = useState(false)
+  const [lesson, setLesson]           = useState<any>(null)
+  const [loading, setLoading]         = useState(true)
+  const [completed, setCompleted]     = useState(false)
+  const [completing, setCompleting]   = useState(false)
+  const [videoError, setVideoError]   = useState(false)
   const [isBackground, setIsBackground] = useState(false)
   const loadAttempts = useRef(0)
 
-  // ── Screen Capture Prevention ──────────────────────────────
+  // ── Screen protection via AppState (no plugin needed) ──────
   useEffect(() => {
-    let screenSub: ScreenCapture.Subscription | null = null
-
-    const enableProtection = async () => {
-      try {
-        await ScreenCapture.preventScreenCaptureAsync()
-        // Alert if someone tries to screenshot
-        screenSub = ScreenCapture.addScreenshotListener(() => {
-          Alert.alert(
-            isAr ? '⚠️ تنبيه' : '⚠️ Warning',
-            isAr
-              ? 'تسجيل المحتوى غير مسموح به وقد يؤدي لإيقاف حسابك.'
-              : 'Screen recording is not allowed and may result in account suspension.',
-            [{ text: isAr ? 'حسناً' : 'OK', style: 'destructive' }]
-          )
-        })
-      } catch (e) {
-        // Silently fail if not supported on device
-        console.log('Screen capture prevention not available:', e)
-      }
-    }
-
-    enableProtection()
-
-    // Hide content when app goes to background (prevents screen recording)
-    const appStateSub = AppState.addEventListener('change', (state: AppStateStatus) => {
+    const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
       setIsBackground(state === 'background' || state === 'inactive')
     })
-
-    return () => {
-      ScreenCapture.allowScreenCaptureAsync().catch(() => {})
-      screenSub?.remove()
-      appStateSub.remove()
-    }
+    return () => sub.remove()
   }, [])
 
-  // ── Load Lesson ────────────────────────────────────────────
-  useEffect(() => {
-    loadLesson()
-  }, [id])
-
-  useEffect(() => {
-    if (user && lesson) checkProgress()
-  }, [user?.id, lesson?.id])
+  // ── Load lesson ────────────────────────────────────────────
+  useEffect(() => { loadLesson() }, [id])
+  useEffect(() => { if (user && lesson) checkProgress() }, [user?.id, lesson?.id])
 
   const loadLesson = async () => {
     if (!id) return
     try {
       const { data, error } = await supabase
         .from('lessons')
-        .select(`
-          id, title_ar, title, description_ar, description,
+        .select(`id, title_ar, title, description_ar, description,
           lesson_type, video_url, vimeo_id, vimeo_url,
           video_duration_seconds, xp_reward, is_free,
-          roadmaps (title_ar, title, slug)
-        `)
+          roadmaps (title_ar, title, slug)`)
         .eq('id', id)
         .single()
-
       if (error) throw error
       setLesson(data)
-    } catch (e: any) {
+    } catch {
       if (loadAttempts.current < 3) {
         loadAttempts.current++
         setTimeout(loadLesson, 800)
@@ -183,11 +125,8 @@ export default function LessonScreen() {
   const checkProgress = async () => {
     if (!user || !id) return
     const { data } = await supabase
-      .from('user_lesson_progress')
-      .select('completed')
-      .eq('user_id', user.id)
-      .eq('lesson_id', id)
-      .maybeSingle()
+      .from('user_lesson_progress').select('completed')
+      .eq('user_id', user.id).eq('lesson_id', id).maybeSingle()
     setCompleted(data?.completed || false)
   }
 
@@ -196,24 +135,16 @@ export default function LessonScreen() {
     setCompleting(true)
     try {
       await supabase.from('user_lesson_progress').upsert({
-        user_id: user.id,
-        lesson_id: id,
-        completed: true,
-        completed_at: new Date().toISOString(),
-        score: 100,
+        user_id: user.id, lesson_id: id,
+        completed: true, completed_at: new Date().toISOString(), score: 100,
       }, { onConflict: 'user_id,lesson_id' })
-
-      // Award XP safely
       await supabase.from('users')
         .update({ xp_total: (user.xp_total || 0) + (lesson.xp_reward || 50) })
         .eq('id', user.id)
-
       setCompleted(true)
       Alert.alert(
         isAr ? '🎉 أحسنت!' : '🎉 Well Done!',
-        isAr
-          ? `أكملت الدرس وحصلت على ${lesson.xp_reward || 50} XP 🔥`
-          : `Lesson complete! You earned ${lesson.xp_reward || 50} XP 🔥`,
+        isAr ? `حصلت على ${lesson.xp_reward || 50} XP 🔥` : `You earned ${lesson.xp_reward || 50} XP 🔥`,
         [{ text: isAr ? 'رجوع' : 'Back', onPress: () => router.back() }]
       )
     } catch (e: any) {
@@ -223,14 +154,11 @@ export default function LessonScreen() {
     }
   }
 
-  // ── Loading State ──────────────────────────────────────────
   if (loading) return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.center}>
         <ActivityIndicator color={Colors.blue} size="large" />
-        <Text style={s.loadingText}>
-          {isAr ? 'جاري تحميل الدرس...' : 'Loading lesson...'}
-        </Text>
+        <Text style={s.loadingText}>{isAr ? 'جاري التحميل...' : 'Loading...'}</Text>
       </View>
     </SafeAreaView>
   )
@@ -247,38 +175,33 @@ export default function LessonScreen() {
     </SafeAreaView>
   )
 
-  const videoHTML = buildVideoHTML(lesson)
-  const hasVideo  = !!videoHTML
+  const videoHTML   = buildVideoHTML(lesson)
+  const hasVideo    = !!videoHTML
   const lessonTitle = isAr ? lesson.title_ar : (lesson.title || lesson.title_ar)
   const lessonDesc  = isAr ? lesson.description_ar : (lesson.description || lesson.description_ar)
+  const isVimeo     = !!(lesson.vimeo_id || lesson.vimeo_url)
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.headerBackBtn}>
-          <Text style={s.headerBackText}>←</Text>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtnSmall}>
+          <Text style={s.backText}>←</Text>
         </TouchableOpacity>
         <Text style={s.headerTitle} numberOfLines={1}>{lessonTitle}</Text>
-        {completed && (
-          <View style={s.completedBadge}>
-            <Text style={{ fontSize: 12 }}>✅</Text>
-          </View>
-        )}
+        {completed && <View style={s.doneBadge}><Text>✅</Text></View>}
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* Video Player */}
+        {/* Video */}
         {isBackground ? (
-          // Hide video when app goes to background
-          <View style={[s.videoContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>
-              {isAr ? '🔒 العودة للتطبيق لمشاهدة الفيديو' : '🔒 Return to app to watch video'}
+          <View style={[s.videoBox, { justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', textAlign: 'center', padding: 20 }}>
+              🔒 {isAr ? 'العودة للتطبيق لمشاهدة الفيديو' : 'Return to app to watch video'}
             </Text>
           </View>
         ) : hasVideo && !videoError ? (
-          <View style={s.videoContainer}>
+          <View style={s.videoBox}>
             <WebView
               source={{ html: videoHTML }}
               style={s.webview}
@@ -289,90 +212,73 @@ export default function LessonScreen() {
               domStorageEnabled
               originWhitelist={['*']}
               onError={() => setVideoError(true)}
-              onHttpError={(e) => {
-                if (e.nativeEvent.statusCode >= 400) setVideoError(true)
-              }}
               scrollEnabled={false}
               bounces={false}
               startInLoadingState
               renderLoading={() => (
-                <View style={[s.videoContainer, { position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center' }]}>
+                <View style={[StyleSheet.absoluteFillObject, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }]}>
                   <ActivityIndicator color={Colors.blue} size="large" />
                 </View>
               )}
             />
           </View>
         ) : videoError ? (
-          <View style={s.videoError}>
+          <View style={[s.videoBox, { justifyContent: 'center', alignItems: 'center' }]}>
             <Text style={{ fontSize: 40, marginBottom: 10 }}>📹</Text>
-            <Text style={s.videoErrorText}>
+            <Text style={{ color: '#94a3b8', fontSize: 14, marginBottom: 12 }}>
               {isAr ? 'تعذّر تشغيل الفيديو' : 'Could not play video'}
             </Text>
             <TouchableOpacity
-              style={{ marginTop: 10, backgroundColor: Colors.blue, borderRadius: 10, paddingHorizontal: 20, paddingVertical: 8 }}
-              onPress={() => setVideoError(false)}
-            >
-              <Text style={{ color: '#fff', fontWeight: '700' }}>
-                {isAr ? 'إعادة المحاولة' : 'Retry'}
-              </Text>
+              style={{ backgroundColor: Colors.blue, borderRadius: 10, paddingHorizontal: 20, paddingVertical: 8 }}
+              onPress={() => setVideoError(false)}>
+              <Text style={{ color: '#fff', fontWeight: '700' }}>{isAr ? 'إعادة المحاولة' : 'Retry'}</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={s.noVideo}>
+          <View style={[s.videoBox, { justifyContent: 'center', alignItems: 'center' }]}>
             <Text style={{ fontSize: 48 }}>📖</Text>
-            <Text style={s.noVideoText}>
-              {isAr ? 'لا يوجد فيديو لهذا الدرس' : 'No video for this lesson'}
+            <Text style={{ color: '#64748b', fontSize: 14, marginTop: 8 }}>
+              {isAr ? 'لا يوجد فيديو' : 'No video'}
             </Text>
           </View>
         )}
 
-        {/* Lesson Info */}
+        {/* Info */}
         <View style={s.info}>
-          <Text style={s.lessonTitle}>{lessonTitle}</Text>
+          <Text style={s.title}>{lessonTitle}</Text>
 
           <View style={s.metaRow}>
-            <View style={s.metaBadge}>
-              <Text style={s.metaText}>
-                ⏱️ {Math.floor((lesson.video_duration_seconds || 600) / 60)}
-                {isAr ? ' دقيقة' : ' min'}
-              </Text>
+            <View style={s.chip}>
+              <Text style={s.chipText}>⏱️ {Math.floor((lesson.video_duration_seconds || 600) / 60)}{isAr ? ' دقيقة' : ' min'}</Text>
             </View>
-            <View style={[s.metaBadge, { backgroundColor: '#FFF5D3' }]}>
-              <Text style={[s.metaText, { color: '#A56644' }]}>
-                ⚡ {lesson.xp_reward || 50} XP
-              </Text>
+            <View style={[s.chip, { backgroundColor: '#FFF5D3' }]}>
+              <Text style={[s.chipText, { color: '#A56644' }]}>⚡ {lesson.xp_reward || 50} XP</Text>
             </View>
-            {/* Video source badge */}
-            {(lesson.vimeo_id || lesson.vimeo_url) && (
-              <View style={[s.metaBadge, { backgroundColor: '#1AB7EA20' }]}>
-                <Text style={[s.metaText, { color: '#1AB7EA' }]}>🎬 Vimeo</Text>
+            {isVimeo && (
+              <View style={[s.chip, { backgroundColor: '#1AB7EA20' }]}>
+                <Text style={[s.chipText, { color: '#1AB7EA' }]}>🎬 Vimeo</Text>
               </View>
             )}
             {completed && (
-              <View style={[s.metaBadge, { backgroundColor: '#D7FFB8' }]}>
-                <Text style={[s.metaText, { color: '#27500A' }]}>
-                  ✅ {isAr ? 'مكتمل' : 'Completed'}
-                </Text>
+              <View style={[s.chip, { backgroundColor: '#D7FFB8' }]}>
+                <Text style={[s.chipText, { color: '#27500A' }]}>✅ {isAr ? 'مكتمل' : 'Done'}</Text>
               </View>
             )}
           </View>
 
-          {lessonDesc && (
-            <Text style={s.description}>{lessonDesc}</Text>
-          )}
+          {lessonDesc ? <Text style={s.desc}>{lessonDesc}</Text> : null}
 
           {lesson.roadmaps && (
-            <View style={s.roadmapBadge}>
+            <View style={s.roadmapTag}>
               <Text style={s.roadmapText}>
                 📚 {isAr ? lesson.roadmaps.title_ar : (lesson.roadmaps.title || lesson.roadmaps.title_ar)}
               </Text>
             </View>
           )}
 
-          {/* Screen protection notice */}
-          <View style={s.protectionNotice}>
+          <View style={s.protectionTag}>
             <Text style={s.protectionText}>
-              🔒 {isAr ? 'المحتوى محمي — التسجيل غير مسموح' : 'Content protected — Recording not allowed'}
+              🔒 {isAr ? 'المحتوى محمي — التسجيل غير مسموح' : 'Protected content — Recording not allowed'}
             </Text>
           </View>
         </View>
@@ -380,31 +286,23 @@ export default function LessonScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Complete Button */}
+      {/* Footer */}
       <View style={s.footer}>
         {!user ? (
-          <View style={s.loginPrompt}>
-            <Text style={s.loginText}>
-              {isAr ? 'سجّل دخولك لمتابعة التقدم' : 'Login to track your progress'}
-            </Text>
+          <View style={s.loginNote}>
+            <Text style={s.loginNoteText}>{isAr ? 'سجّل دخولك لمتابعة التقدم' : 'Login to track progress'}</Text>
           </View>
         ) : completed ? (
-          <View style={[s.completeBtn, s.completedBtn]}>
-            <Text style={s.completeBtnText}>
-              ✅ {isAr ? 'أكملت هذا الدرس' : 'Lesson Completed'}
-            </Text>
+          <View style={[s.completeBtn, { backgroundColor: Colors.green, opacity: 0.85 }]}>
+            <Text style={s.completeBtnText}>✅ {isAr ? 'أكملت هذا الدرس' : 'Lesson Completed'}</Text>
           </View>
         ) : (
           <TouchableOpacity
             style={[s.completeBtn, completing && { opacity: 0.7 }]}
-            onPress={completeLesson}
-            disabled={completing}
-          >
+            onPress={completeLesson} disabled={completing}>
             {completing
               ? <ActivityIndicator color="#fff" />
-              : <Text style={s.completeBtnText}>
-                  {isAr ? '✅ أكملت الدرس' : '✅ Mark as Complete'}
-                </Text>}
+              : <Text style={s.completeBtnText}>{isAr ? '✅ أكملت الدرس' : '✅ Mark as Complete'}</Text>}
           </TouchableOpacity>
         )}
       </View>
@@ -413,42 +311,33 @@ export default function LessonScreen() {
 }
 
 const s = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: '#0f172a' },
-  center:         { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  loadingText:    { color: '#64748b', fontSize: 14, marginTop: 12 },
-  errorText:      { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 20 },
-  backBtn:        { backgroundColor: Colors.blue, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
-  backBtnText:    { color: '#fff', fontWeight: '700', fontSize: 14 },
-
-  header:         { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, backgroundColor: '#0f172a', borderBottomWidth: 1, borderBottomColor: '#1e293b' },
-  headerBackBtn:  { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  headerBackText: { fontSize: 22, color: Colors.blue, fontWeight: '700' },
-  headerTitle:    { flex: 1, fontSize: 16, fontWeight: '800', color: '#fff' },
-  completedBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#D7FFB8', justifyContent: 'center', alignItems: 'center' },
-
-  videoContainer: { width: '100%', aspectRatio: 16/9, backgroundColor: '#000', overflow: 'hidden' },
-  webview:        { flex: 1, backgroundColor: '#000' },
-  videoError:     { aspectRatio: 16/9, backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  videoErrorText: { color: '#94a3b8', fontSize: 15, fontWeight: '700', textAlign: 'center' },
-  noVideo:        { aspectRatio: 16/9, backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center', gap: 10 },
-  noVideoText:    { color: '#64748b', fontSize: 14 },
-
-  scroll:         { flexGrow: 1 },
-  info:           { padding: 16 },
-  lessonTitle:    { fontSize: 20, fontWeight: '900', color: '#fff', marginBottom: 12, textAlign: 'right' },
-  metaRow:        { flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap', justifyContent: 'flex-end' },
-  metaBadge:      { backgroundColor: '#1e293b', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  metaText:       { color: '#94a3b8', fontSize: 12, fontWeight: '600' },
-  description:    { fontSize: 14, color: '#94a3b8', lineHeight: 22, marginBottom: 14, textAlign: 'right' },
-  roadmapBadge:   { backgroundColor: '#1e293b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignSelf: 'flex-end', marginBottom: 12 },
-  roadmapText:    { color: '#60a5fa', fontSize: 13, fontWeight: '700' },
-  protectionNotice: { backgroundColor: '#1e293b', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  protectionText: { color: '#475569', fontSize: 12, flex: 1, textAlign: 'center' },
-
-  footer:         { padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16, backgroundColor: '#0f172a', borderTopWidth: 1, borderTopColor: '#1e293b' },
-  completeBtn:    { backgroundColor: Colors.blue, borderRadius: 14, padding: 17, alignItems: 'center', shadowColor: Colors.blue, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
-  completedBtn:   { backgroundColor: Colors.green, opacity: 0.8 },
-  completeBtnText:{ color: '#fff', fontSize: 16, fontWeight: '900' },
-  loginPrompt:    { backgroundColor: '#1e293b', borderRadius: 12, padding: 14, alignItems: 'center' },
-  loginText:      { color: '#64748b', fontSize: 14 },
+  container:       { flex: 1, backgroundColor: '#0f172a' },
+  center:          { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  loadingText:     { color: '#64748b', fontSize: 14, marginTop: 12 },
+  errorText:       { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 20 },
+  backBtn:         { backgroundColor: Colors.blue, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
+  backBtnText:     { color: '#fff', fontWeight: '700', fontSize: 14 },
+  header:          { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, borderBottomWidth: 1, borderBottomColor: '#1e293b' },
+  backBtnSmall:    { width: 36, height: 36, justifyContent: 'center' },
+  backText:        { fontSize: 22, color: Colors.blue, fontWeight: '700' },
+  headerTitle:     { flex: 1, fontSize: 16, fontWeight: '800', color: '#fff' },
+  doneBadge:       { width: 28, height: 28, borderRadius: 14, backgroundColor: '#D7FFB8', justifyContent: 'center', alignItems: 'center' },
+  videoBox:        { width: '100%', aspectRatio: 16/9, backgroundColor: '#000', overflow: 'hidden' },
+  webview:         { flex: 1, backgroundColor: '#000' },
+  scroll:          { flexGrow: 1 },
+  info:            { padding: 16 },
+  title:           { fontSize: 20, fontWeight: '900', color: '#fff', marginBottom: 12, textAlign: 'right' },
+  metaRow:         { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', marginBottom: 14 },
+  chip:            { backgroundColor: '#1e293b', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  chipText:        { color: '#94a3b8', fontSize: 12, fontWeight: '600' },
+  desc:            { fontSize: 14, color: '#94a3b8', lineHeight: 22, textAlign: 'right', marginBottom: 14 },
+  roadmapTag:      { backgroundColor: '#1e293b', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignSelf: 'flex-end', marginBottom: 10 },
+  roadmapText:     { color: '#60a5fa', fontSize: 13, fontWeight: '700' },
+  protectionTag:   { backgroundColor: '#1e293b', borderRadius: 10, padding: 10, marginTop: 4 },
+  protectionText:  { color: '#475569', fontSize: 12, textAlign: 'center' },
+  footer:          { padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16, borderTopWidth: 1, borderTopColor: '#1e293b' },
+  completeBtn:     { backgroundColor: Colors.blue, borderRadius: 14, padding: 17, alignItems: 'center', shadowColor: Colors.blue, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
+  completeBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  loginNote:       { backgroundColor: '#1e293b', borderRadius: 12, padding: 14, alignItems: 'center' },
+  loginNoteText:   { color: '#64748b', fontSize: 14 },
 })
