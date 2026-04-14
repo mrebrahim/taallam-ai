@@ -1,81 +1,56 @@
-// Firebase Analytics wrapper
-// Works gracefully if Firebase isn't configured yet
+// Analytics wrapper using Expo/React Native compatible approach
+// Firebase Analytics requires native setup - using graceful fallback
 
-let analytics: any = null
+type EventParams = Record<string, string | number | boolean>
 
-const initAnalytics = async () => {
-  try {
-    const firebaseAnalytics = await import('@react-native-firebase/analytics')
-    analytics = firebaseAnalytics.default()
-    return analytics
-  } catch (e) {
-    // Firebase not configured yet - silent fail
-    return null
+// Simple event queue for debugging
+const eventLog: Array<{ name: string; params?: EventParams; time: string }> = []
+
+const track = (name: string, params?: EventParams) => {
+  const entry = { name, params, time: new Date().toISOString() }
+  eventLog.push(entry)
+  if (__DEV__) {
+    console.log(`[Analytics] ${name}`, params || '')
   }
+  // TODO: When Firebase is properly set up with native modules,
+  // uncomment the code below and run: npx expo prebuild
+  //
+  // import analytics from '@react-native-firebase/analytics'
+  // analytics().logEvent(name, params)
 }
 
-// Initialize on first use
-initAnalytics()
-
-export const logEvent = async (name: string, params?: Record<string, any>) => {
-  try {
-    const a = analytics || await initAnalytics()
-    if (a) await a.logEvent(name, params)
-  } catch {}
-}
-
-export const logScreenView = async (screenName: string) => {
-  try {
-    const a = analytics || await initAnalytics()
-    if (a) await a.logScreenView({ screen_name: screenName, screen_class: screenName })
-  } catch {}
-}
-
-export const setUserId = async (userId: string | null) => {
-  try {
-    const a = analytics || await initAnalytics()
-    if (a) await a.setUserId(userId)
-  } catch {}
-}
-
-export const setUserProperty = async (name: string, value: string) => {
-  try {
-    const a = analytics || await initAnalytics()
-    if (a) await a.setUserProperty(name, value)
-  } catch {}
-}
-
-// Taallam-specific events
 export const Analytics = {
   // Auth
-  login:          (method: string) => logEvent('login', { method }),
-  signup:         (method: string) => logEvent('sign_up', { method }),
-  logout:         () => logEvent('logout'),
+  login:             (method: string) => track('login', { method }),
+  signup:            (method: string) => track('sign_up', { method }),
+  logout:            () => track('logout'),
 
   // Learning
-  lessonStart:    (lessonId: string, title: string) => logEvent('lesson_start', { lesson_id: lessonId, lesson_title: title }),
-  lessonComplete: (lessonId: string, xp: number) => logEvent('lesson_complete', { lesson_id: lessonId, xp_earned: xp }),
-  
+  lessonStart:       (lessonId: string, title: string) => track('lesson_start', { lesson_id: lessonId, lesson_title: title }),
+  lessonComplete:    (lessonId: string, xp: number) => track('lesson_complete', { lesson_id: lessonId, xp_earned: xp }),
+
   // Challenges
-  challengeStart:    (challengeId: string) => logEvent('challenge_start', { challenge_id: challengeId }),
-  challengeCorrect:  (challengeId: string, xp: number) => logEvent('challenge_correct', { challenge_id: challengeId, xp_earned: xp }),
-  challengeWrong:    (challengeId: string) => logEvent('challenge_wrong', { challenge_id: challengeId }),
+  challengeStart:    (challengeId: string) => track('challenge_start', { challenge_id: challengeId }),
+  challengeCorrect:  (challengeId: string, xp: number) => track('challenge_correct', { challenge_id: challengeId, xp_earned: xp }),
+  challengeWrong:    (challengeId: string) => track('challenge_wrong', { challenge_id: challengeId }),
 
   // Engagement
-  streakUpdate:   (days: number) => logEvent('streak_update', { streak_days: days }),
-  xpEarned:       (amount: number, reason: string) => logEvent('xp_earned', { xp_amount: amount, reason }),
-  
+  streakUpdate:      (days: number) => track('streak_update', { streak_days: days }),
+  xpEarned:          (amount: number, reason: string) => track('xp_earned', { xp_amount: amount, reason }),
+
   // Navigation
-  screenView:     (screen: string) => logScreenView(screen),
-  
+  screenView:        (screen: string) => track('screen_view', { screen_name: screen }),
+
   // Subscription
-  enrollView:     (courseSlug: string) => logEvent('course_enroll_view', { course_slug: courseSlug }),
-  enrollStart:    (courseSlug: string) => logEvent('begin_checkout', { course_slug: courseSlug }),
+  enrollView:        (courseSlug: string) => track('course_enroll_view', { course_slug: courseSlug }),
 
   // Language
-  langSelect:     (lang: string) => logEvent('language_selected', { language: lang }),
+  langSelect:        (lang: string) => track('language_selected', { language: lang }),
 
-  // Set user
-  identify:       (userId: string) => setUserId(userId),
-  reset:          () => setUserId(null),
+  // User
+  identify:          (userId: string) => track('user_identified', { user_id: userId }),
+  reset:             () => track('user_reset'),
+
+  // Debug
+  getLog:            () => eventLog,
 }
