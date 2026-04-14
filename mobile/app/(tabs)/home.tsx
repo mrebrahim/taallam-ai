@@ -112,7 +112,16 @@ export default function HomeScreen() {
 
         {/* All Paths */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{enrolledRoadmaps.length === 0 ? '🚀 ابدأ رحلتك' : 'كل المسارات'}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>
+              {enrolledRoadmaps.length === 0 ? '🚀 ابدأ رحلتك' : (isAr ? 'كل المسارات' : 'All Courses')}
+            </Text>
+            <TouchableOpacity onPress={() => router.push('/courses' as any)}>
+              <Text style={{ fontSize: 13, color: Colors.blue, fontWeight: '700' }}>
+                {isAr ? 'عرض الكل ←' : 'See All →'}
+              </Text>
+            </TouchableOpacity>
+          </View>
           {Object.entries(ROADMAP_META).map(([slug, meta]) => {
             const roadmap = roadmaps.find(r => r.slug === slug)
             const isEnrolled = roadmap && enrollments.has(roadmap.id)

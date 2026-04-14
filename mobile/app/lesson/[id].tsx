@@ -13,7 +13,6 @@ import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
 import { Analytics } from '@/lib/analytics'
 
-// ─── Video helpers ────────────────────────────────────────────
 function getYouTubeId(url: string): string | null {
   if (!url) return null
   const patterns = [
@@ -36,44 +35,18 @@ function getVimeoId(input: string): string | null {
   return m ? m[1] : null
 }
 
-// Block screen recording via WebView JS injection
-const ANTI_RECORD_JS = `
-(function() {
-  // Disable right-click / long press save
-  document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-  
-  // Disable text selection
-  document.body.style.userSelect = 'none';
-  document.body.style.webkitUserSelect = 'none';
-  
-  // Detect screen recording on iOS (visual content hidden)
-  if (window.screen && 'isExtended' in window.screen) {
-    if (window.screen.isExtended) {
-      document.body.innerHTML = '<div style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-size:18px;text-align:center;padding:20px">🔒 المحتوى محمي</div>';
-    }
-  }
-})();
-true;
-`
-
 function buildVideoHTML(lesson: any): string {
   let embedUrl = ''
-
-  // Priority 1: Vimeo (recommended from admin)
   if (lesson.vimeo_id) {
     embedUrl = `https://player.vimeo.com/video/${lesson.vimeo_id}?autoplay=0&title=0&byline=0&portrait=0&dnt=1`
   } else if (lesson.vimeo_url) {
     const id = getVimeoId(lesson.vimeo_url)
     if (id) embedUrl = `https://player.vimeo.com/video/${id}?autoplay=0&title=0&byline=0&portrait=0&dnt=1`
-  }
-  // Priority 2: YouTube
-  else if (lesson.video_url) {
+  } else if (lesson.video_url) {
     const ytId = getYouTubeId(lesson.video_url)
     if (ytId) embedUrl = `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&playsinline=1`
   }
-
   if (!embedUrl) return ''
-
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -81,22 +54,14 @@ function buildVideoHTML(lesson: any): string {
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body {
-  background:#000; width:100%; height:100%;
-  overflow:hidden; user-select:none; -webkit-user-select:none;
-}
+html, body { background:#000; width:100%; height:100%; overflow:hidden; user-select:none; -webkit-user-select:none; }
 iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:none; }
-/* Block screenshot indicators */
-body { -webkit-touch-callout:none; }
 </style>
 </head>
 <body>
-<iframe
-  src="${embedUrl}"
+<iframe src="${embedUrl}"
   allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-  allowfullscreen webkitallowfullscreen mozallowfullscreen
-  frameborder="0"
-  sandbox="allow-scripts allow-same-origin allow-presentation allow-popups">
+  allowfullscreen webkitallowfullscreen mozallowfullscreen frameborder="0">
 </iframe>
 </body>
 </html>`
@@ -113,12 +78,9 @@ export default function LessonScreen() {
   const [completing, setCompleting]   = useState(false)
   const [videoError, setVideoError]   = useState(false)
   const [isBackground, setIsBackground] = useState(false)
-  const [enrolled, setEnrolled]       = useState(false)
-  const [checkingEnroll, setCheckingEnroll] = useState(true)
   const loadAttempts = useRef(0)
-  const webviewRef = useRef<WebView>(null)
 
-  // ── Protect content when app goes to background ────────────
+  // Hide video when app goes to background
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
       setIsBackground(state === 'background' || state === 'inactive')
@@ -126,15 +88,14 @@ export default function LessonScreen() {
     return () => sub.remove()
   }, [])
 
-  // ── Load lesson + check enrollment ────────────────────────
+  // Load lesson on mount
   useEffect(() => {
     loadLesson()
   }, [id])
 
+  // Check progress when user is ready
   useEffect(() => {
-    if (user && lesson) {
-      checkEnrollmentAndProgress()
-    }
+    if (user && lesson) checkProgress()
   }, [user?.id, lesson?.id])
 
   const loadLesson = async () => {
@@ -152,52 +113,34 @@ export default function LessonScreen() {
         .single()
 
       if (error) {
-        // Could be RLS blocking — try without auth check
-        console.log('Lesson load error:', error.message)
         if (loadAttempts.current < 3) {
           loadAttempts.current++
-          setTimeout(loadLesson, 800)
+          setTimeout(loadLesson, 1000)
           return
         }
         throw error
       }
       setLesson(data)
+      Analytics.lessonStart(data.id, data.title_ar || '')
     } catch (e: any) {
-      console.log('Lesson final error:', e.message)
       Alert.alert(
         isAr ? 'خطأ' : 'Error',
-        isAr ? 'تعذّر تحميل الدرس — تأكد من اشتراكك في الكورس' : 'Could not load lesson — check your enrollment'
+        isAr ? 'تعذّر تحميل الدرس' : 'Could not load lesson'
       )
     } finally {
       setLoading(false)
     }
   }
 
-  const checkEnrollmentAndProgress = async () => {
-    if (!user || !lesson) return
-    setCheckingEnroll(true)
-    try {
-      const [{ data: enrollment }, { data: progress }] = await Promise.all([
-        // Check enrollment
-        supabase.from('course_enrollments')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('roadmap_id', lesson.roadmap_id)
-          .eq('is_active', true)
-          .maybeSingle(),
-        // Check progress
-        supabase.from('user_lesson_progress')
-          .select('completed')
-          .eq('user_id', user.id)
-          .eq('lesson_id', id)
-          .maybeSingle(),
-      ])
-
-      setEnrolled(!!enrollment || lesson.is_free)
-      setCompleted(progress?.completed || false)
-    } finally {
-      setCheckingEnroll(false)
-    }
+  const checkProgress = async () => {
+    if (!user || !id) return
+    const { data } = await supabase
+      .from('user_lesson_progress')
+      .select('completed')
+      .eq('user_id', user.id)
+      .eq('lesson_id', id)
+      .maybeSingle()
+    setCompleted(data?.completed || false)
   }
 
   const completeLesson = async () => {
@@ -205,24 +148,17 @@ export default function LessonScreen() {
     setCompleting(true)
     try {
       await supabase.from('user_lesson_progress').upsert({
-        user_id: user.id,
-        lesson_id: id,
-        completed: true,
-        completed_at: new Date().toISOString(),
-        score: 100,
+        user_id: user.id, lesson_id: id,
+        completed: true, completed_at: new Date().toISOString(), score: 100,
       }, { onConflict: 'user_id,lesson_id' })
-
       await supabase.from('users')
         .update({ xp_total: (user.xp_total || 0) + (lesson.xp_reward || 50) })
         .eq('id', user.id)
-
       setCompleted(true)
       Analytics.lessonComplete(id as string, lesson.xp_reward || 50)
       Alert.alert(
         isAr ? '🎉 أحسنت!' : '🎉 Well Done!',
-        isAr
-          ? `أكملت الدرس! حصلت على ${lesson.xp_reward || 50} XP 🔥`
-          : `Lesson complete! You earned ${lesson.xp_reward || 50} XP 🔥`,
+        isAr ? `حصلت على ${lesson.xp_reward || 50} XP 🔥` : `You earned ${lesson.xp_reward || 50} XP 🔥`,
         [{ text: isAr ? 'رجوع' : 'Back', onPress: () => router.back() }]
       )
     } catch (e: any) {
@@ -232,12 +168,11 @@ export default function LessonScreen() {
     }
   }
 
-  // ── Render states ──────────────────────────────────────────
   if (loading) return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.center}>
         <ActivityIndicator color={Colors.blue} size="large" />
-        <Text style={s.loadingText}>{isAr ? 'جاري تحميل الدرس...' : 'Loading lesson...'}</Text>
+        <Text style={s.loadingText}>{isAr ? 'جاري التحميل...' : 'Loading...'}</Text>
       </View>
     </SafeAreaView>
   )
@@ -247,9 +182,6 @@ export default function LessonScreen() {
       <View style={s.center}>
         <Text style={{ fontSize: 52, marginBottom: 16 }}>😕</Text>
         <Text style={s.errorText}>{isAr ? 'الدرس غير موجود' : 'Lesson not found'}</Text>
-        <Text style={[s.errorText, { fontSize: 13, color: '#64748b', marginTop: 8, marginBottom: 20 }]}>
-          {isAr ? 'تأكد من اشتراكك في الكورس' : 'Make sure you are enrolled in the course'}
-        </Text>
         <TouchableOpacity style={s.primaryBtn} onPress={() => router.back()}>
           <Text style={s.primaryBtnText}>{isAr ? '← رجوع' : '← Back'}</Text>
         </TouchableOpacity>
@@ -263,30 +195,6 @@ export default function LessonScreen() {
   const lessonDesc  = isAr ? lesson.description_ar : (lesson.description || lesson.description_ar)
   const isVimeo     = !!(lesson.vimeo_id || lesson.vimeo_url)
 
-  // Not enrolled and not free
-  if (!checkingEnroll && !enrolled && !lesson.is_free) {
-    return (
-      <SafeAreaView style={s.container} edges={['top']}>
-        <View style={s.header}>
-          <TouchableOpacity onPress={() => router.back()} style={s.backBtnSmall}>
-            <Text style={s.backText}>←</Text>
-          </TouchableOpacity>
-          <Text style={s.headerTitle} numberOfLines={1}>{lessonTitle}</Text>
-        </View>
-        <View style={s.center}>
-          <Text style={{ fontSize: 52, marginBottom: 16 }}>🔒</Text>
-          <Text style={s.errorText}>{isAr ? 'هذا الدرس للمشتركين فقط' : 'This lesson is for enrolled users only'}</Text>
-          <Text style={[s.errorText, { fontSize: 13, color: '#64748b', marginTop: 8, marginBottom: 20, textAlign: 'center' }]}>
-            {isAr ? 'اشترك في الكورس للوصول لجميع الدروس' : 'Subscribe to the course to access all lessons'}
-          </Text>
-          <TouchableOpacity style={s.primaryBtn} onPress={() => router.replace('/(tabs)/learn')}>
-            <Text style={s.primaryBtnText}>{isAr ? 'عرض الكورسات' : 'Browse Courses'}</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    )
-  }
-
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       {/* Header */}
@@ -299,10 +207,8 @@ export default function LessonScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* ── VIDEO PLAYER ── */}
+        {/* Video */}
         {isBackground ? (
-          // Hide video when app is in background (prevents screen recording)
           <View style={[s.videoBox, s.videoHidden]}>
             <Text style={{ fontSize: 32, marginBottom: 10 }}>🔒</Text>
             <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700', textAlign: 'center' }}>
@@ -312,7 +218,6 @@ export default function LessonScreen() {
         ) : hasVideo && !videoError ? (
           <View style={s.videoBox}>
             <WebView
-              ref={webviewRef}
               source={{ html: videoHTML }}
               style={s.webview}
               allowsFullscreenVideo
@@ -321,16 +226,7 @@ export default function LessonScreen() {
               javaScriptEnabled
               domStorageEnabled
               originWhitelist={['*']}
-              // Inject anti-recording JS after load
-              injectedJavaScript={ANTI_RECORD_JS}
-              // Block screen capture on Android via FLAG_SECURE equivalent
-              onLoad={() => {
-                webviewRef.current?.injectJavaScript(ANTI_RECORD_JS)
-              }}
               onError={() => setVideoError(true)}
-              onHttpError={(e) => {
-                if (e.nativeEvent.statusCode >= 400) setVideoError(true)
-              }}
               scrollEnabled={false}
               bounces={false}
               startInLoadingState
@@ -357,15 +253,14 @@ export default function LessonScreen() {
           <View style={[s.videoBox, s.videoHidden]}>
             <Text style={{ fontSize: 48 }}>📖</Text>
             <Text style={{ color: '#64748b', fontSize: 14, marginTop: 8 }}>
-              {isAr ? 'لا يوجد فيديو لهذا الدرس' : 'No video for this lesson'}
+              {isAr ? 'لا يوجد فيديو' : 'No video'}
             </Text>
           </View>
         )}
 
-        {/* ── INFO ── */}
+        {/* Info */}
         <View style={s.info}>
           <Text style={s.title}>{lessonTitle}</Text>
-
           <View style={s.metaRow}>
             <View style={s.chip}>
               <Text style={s.chipText}>⏱️ {Math.floor((lesson.video_duration_seconds || 600) / 60)}{isAr ? ' دقيقة' : ' min'}</Text>
@@ -384,9 +279,7 @@ export default function LessonScreen() {
               </View>
             )}
           </View>
-
-          {lessonDesc ? <Text style={s.desc}>{lessonDesc}</Text> : null}
-
+          {lessonDesc && <Text style={s.desc}>{lessonDesc}</Text>}
           {lesson.roadmaps && (
             <View style={s.roadmapTag}>
               <Text style={s.roadmapText}>
@@ -394,18 +287,16 @@ export default function LessonScreen() {
               </Text>
             </View>
           )}
-
           <View style={s.protectionTag}>
             <Text style={s.protectionText}>
               🔒 {isAr ? 'المحتوى محمي — التسجيل غير مسموح' : 'Protected content — Recording not allowed'}
             </Text>
           </View>
         </View>
-
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* ── FOOTER ── */}
+      {/* Footer */}
       <View style={s.footer}>
         {!user ? (
           <View style={s.loginNote}>
@@ -418,8 +309,7 @@ export default function LessonScreen() {
         ) : (
           <TouchableOpacity
             style={[s.completeBtn, completing && { opacity: 0.7 }]}
-            onPress={completeLesson}
-            disabled={completing}>
+            onPress={completeLesson} disabled={completing}>
             {completing
               ? <ActivityIndicator color="#fff" />
               : <Text style={s.completeBtnText}>{isAr ? '✅ أكملت الدرس' : '✅ Mark as Complete'}</Text>}
@@ -434,7 +324,7 @@ const s = StyleSheet.create({
   container:       { flex: 1, backgroundColor: '#0f172a' },
   center:          { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   loadingText:     { color: '#64748b', fontSize: 14, marginTop: 12 },
-  errorText:       { fontSize: 18, fontWeight: '700', color: '#fff', textAlign: 'center' },
+  errorText:       { fontSize: 18, fontWeight: '700', color: '#fff', textAlign: 'center', marginBottom: 20 },
   primaryBtn:      { backgroundColor: Colors.blue, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
   primaryBtnText:  { color: '#fff', fontWeight: '800', fontSize: 15 },
   header:          { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, borderBottomWidth: 1, borderBottomColor: '#1e293b' },
