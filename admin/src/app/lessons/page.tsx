@@ -175,11 +175,13 @@ export default function LessonsPage() {
     setUploadingImg(false)
   }
 
-  // ── Save challenge ──
+  // ── Save challenge and auto-link to current lesson ──
   const saveChallenge = async () => {
     if (!challengeForm.title_ar) { setMsg('❌ اكتب عنوان التحدي'); setTimeout(() => setMsg(''), 3000); return }
     if (!challengeForm.question_ar) { setMsg('❌ اكتب السؤال'); setTimeout(() => setMsg(''), 3000); return }
-    if (challengeForm.options.some((o: string) => !o.trim())) { setMsg('❌ أكمل كل الخيارات'); setTimeout(() => setMsg(''), 3000); return }
+    if (challengeForm.options && challengeForm.options.some((o: string) => !o.trim())) {
+      setMsg('❌ أكمل كل الخيارات'); setTimeout(() => setMsg(''), 3000); return
+    }
     setSaving(true)
 
     const payload = {
@@ -188,20 +190,40 @@ export default function LessonsPage() {
       xp_reward: Number(challengeForm.xp_reward),
       difficulty: Number(challengeForm.difficulty),
       sort_order: Number(challengeForm.sort_order),
-      roadmap_id: challengeForm.roadmap_id || null,
+      roadmap_id: challengeForm.roadmap_id || form.roadmap_id || null,
       image_url: challengeForm.image_url || null,
+      is_active: true,
     }
 
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/challenges`, { method: 'POST', headers: H, body: JSON.stringify(payload) })
+    const H2 = { ...H, 'Prefer': 'return=representation' }
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/challenges`, {
+      method: 'POST', headers: H2, body: JSON.stringify(payload)
+    })
+
     if (res.ok || res.status === 201) {
-      setMsg('✅ تم إضافة التحدي')
-      resetForm(); load()
+      const [newChallenge] = await res.json().catch(() => [])
+      if (newChallenge?.id) {
+        // Auto-link challenge to current lesson form
+        setForm((f: any) => ({ ...f, linked_challenge_id: newChallenge.id }))
+        setMsg('✅ تم إنشاء التحدي وربطه بالدرس تلقائياً!')
+      } else {
+        setMsg('✅ تم إضافة التحدي — اختره من القائمة لربطه بالدرس')
+      }
+      // Reset challenge form and go back to lesson
+      setChallengeForm({
+        title_ar: '', description_ar: '', challenge_type: 'complete_sentence',
+        question_ar: '', options: ['', '', '', ''], correct_answer: 0,
+        explanation_ar: '', image_url: '', use_ai_validation: false,
+        xp_reward: 100, difficulty: 1, is_active: true, sort_order: 0, roadmap_id: ''
+      })
+      setEntryType('lesson')
+      load() // Refresh challenges list
     } else {
       const err = await res.json().catch(() => ({}))
       setMsg('❌ ' + (err?.message || err?.details || res.status))
     }
     setSaving(false)
-    setTimeout(() => setMsg(''), 4000)
+    setTimeout(() => setMsg(''), 5000)
   }
 
   const resetForm = () => {
@@ -759,7 +781,7 @@ export default function LessonsPage() {
 
                   <button onClick={saveChallenge} disabled={saving}
                     style={{ width: '100%', padding: '14px', borderRadius: 8, border: 'none', background: saving ? '#334155' : '#CE82FF', color: '#fff', fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer', fontSize: 15 }}>
-                    {saving ? '⏳ جاري الحفظ...' : '⚔️ إضافة التحدي'}
+                    {saving ? '⏳ جاري الحفظ...' : '⚔️ إنشاء التحدي وربطه بالدرس'}
                   </button>
                 </div>
               )}
