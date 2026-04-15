@@ -857,17 +857,22 @@ export default function LessonsPage() {
                   {/* Challenge Type */}
                   <div>
                     <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 8, fontWeight: 600 }}>نوع التحدي *</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
                       {[
-                        ['complete_sentence', '❓', 'سؤال MCQ', 'اختيار من 4 خيارات'],
-                        ['node_analysis', '📸', 'رفع صورة', 'الطالب يرفع صورة للمراجعة'],
-                        ['video_submission', '🎥', 'فيديو يوتيوب', 'الطالب يرفع رابط فيديو شرح'],
+                        ['mcq',              '❓', 'MCQ',           'اختر من 4 خيارات'],
+                        ['complete_sentence','✏️', 'أكمل الجملة',   'فراغ في جملة'],
+                        ['true_false',       '⚖️', 'صح أو غلط',     'إجابة ثنائية'],
+                        ['ordering',         '🔢', 'رتب الخطوات',   'سحب وترتيب'],
+                        ['matching',         '🔗', 'وصل بين',       'أزواج متطابقة'],
+                        ['node_analysis',    '📸', 'رفع صورة',      'للمراجعة البشرية'],
+                        ['video_submission', '🎥', 'فيديو يوتيوب',  'رابط شرح يوتيوب'],
+                        ['text_submission',  '✍️', 'إجابة مفتوحة', 'Prompt / Mission'],
                       ].map(([type, icon, label, desc]) => (
                         <button key={type} type="button" onClick={() => setChallengeForm((f: any) => ({ ...f, challenge_type: type }))}
-                          style={{ padding: '12px', borderRadius: 8, border: `2px solid ${challengeForm.challenge_type === type ? '#CE82FF' : '#334155'}`, background: challengeForm.challenge_type === type ? '#2d1a4e' : 'transparent', cursor: 'pointer', textAlign: 'right' }}>
-                          <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
-                          <div style={{ fontWeight: 700, color: challengeForm.challenge_type === type ? '#a78bfa' : '#94a3b8', fontSize: 13 }}>{label}</div>
-                          <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>{desc}</div>
+                          style={{ padding: '10px 8px', borderRadius: 8, border: `2px solid ${challengeForm.challenge_type === type ? '#CE82FF' : '#334155'}`, background: challengeForm.challenge_type === type ? '#2d1a4e' : 'transparent', cursor: 'pointer', textAlign: 'center' }}>
+                          <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
+                          <div style={{ fontWeight: 700, color: challengeForm.challenge_type === type ? '#a78bfa' : '#94a3b8', fontSize: 12 }}>{label}</div>
+                          <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>{desc}</div>
                         </button>
                       ))}
                     </div>
@@ -938,6 +943,66 @@ export default function LessonsPage() {
                         <div style={{ fontSize: 11, color: '#475569' }}>يقارن بين صورة الـ Node المرجعية وصورة الطالب</div>
                       </div>
                     </label>
+                  )}
+
+                  {/* Ordering items */}
+                  {challengeForm.challenge_type === 'ordering' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>
+                        📋 عناصر الترتيب (أضف كل خطوة)
+                      </label>
+                      {(challengeForm.items || ['','','']).map((item: any, i: number) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                          <input value={typeof item === 'object' ? item.text : item}
+                            onChange={e => {
+                              const items = [...(challengeForm.items || ['','',''])];
+                              items[i] = { id: String(i), text: e.target.value };
+                              setChallengeForm((f: any) => ({ ...f, items, correct_order: items.map((_: any, idx: number) => idx) }))
+                            }}
+                            placeholder={`الخطوة ${i + 1}`}
+                            style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: 13 }} />
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => setChallengeForm((f: any) => ({ ...f, items: [...(f.items || []), { id: String((f.items||[]).length), text: '' }] }))}
+                        style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 12 }}>
+                        + خطوة
+                      </button>
+                      <div style={{ fontSize: 11, color: '#475569', marginTop: 6 }}>💡 الترتيب الصحيح = الترتيب المدخل</div>
+                    </div>
+                  )}
+
+                  {/* Matching pairs */}
+                  {challengeForm.challenge_type === 'matching' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>
+                        🔗 أزواج التطابق
+                      </label>
+                      {(challengeForm.pairs || [{left:'',right:''}]).map((pair: any, i: number) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+                          <input value={pair.left} onChange={e => { const p = [...(challengeForm.pairs||[])]; p[i] = {...p[i], left: e.target.value}; setChallengeForm((f: any) => ({ ...f, pairs: p })) }}
+                            placeholder="العنصر" style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: 13 }} />
+                          <span style={{ color: '#475569' }}>←→</span>
+                          <input value={pair.right} onChange={e => { const p = [...(challengeForm.pairs||[])]; p[i] = {...p[i], right: e.target.value}; setChallengeForm((f: any) => ({ ...f, pairs: p })) }}
+                            placeholder="الوظيفة" style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: 13 }} />
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => setChallengeForm((f: any) => ({ ...f, pairs: [...(f.pairs||[]), {left:'',right:''}] }))}
+                        style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 12 }}>
+                        + زوج
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Blank sentence */}
+                  {challengeForm.challenge_type === 'complete_sentence' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>
+                        ✏️ الجملة الناقصة (استخدم ___ للفراغ)
+                      </label>
+                      <input value={challengeForm.blank_sentence || ''} onChange={e => setChallengeForm((f: any) => ({ ...f, blank_sentence: e.target.value }))}
+                        placeholder="مثال: الـ ___ يُستخدم لنقل البيانات بين الأنظمة"
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: 14, boxSizing: 'border-box' }} />
+                    </div>
                   )}
 
                   <div>
