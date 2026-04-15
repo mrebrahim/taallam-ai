@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
 import { Analytics } from '@/lib/analytics'
-import { Analytics } from '@/lib/analytics'
 
 const DIFF_LABELS_AR = ['', 'سهل', 'متوسط', 'صعب', 'خبير', 'أسطوري']
 const DIFF_LABELS_EN = ['', 'Easy', 'Medium', 'Hard', 'Expert', 'Legendary']
