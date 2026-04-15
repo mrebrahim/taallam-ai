@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
 import { Analytics } from '@/lib/analytics'
+import { Analytics } from '@/lib/analytics'
 
 const DIFF_LABELS_AR = ['', 'سهل', 'متوسط', 'صعب', 'خبير', 'أسطوري']
 const DIFF_LABELS_EN = ['', 'Easy', 'Medium', 'Hard', 'Expert', 'Legendary']
@@ -50,8 +51,13 @@ export default function ChallengesScreen() {
   }
 
   const openChallenge = (ch: any) => {
-    setActive(ch)
     Analytics.challengeStart(ch.id)
+    // Task challenges go to dedicated screen
+    if (ch.challenge_type === 'task') {
+      router.push(`/task/${ch.id}` as any)
+      return
+    }
+    setActive(ch)
     setSelected(null)
     setAnswered(false)
     setIsCorrect(false)
