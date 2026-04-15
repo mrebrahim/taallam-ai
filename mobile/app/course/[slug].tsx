@@ -68,7 +68,7 @@ export default function CourseDetailScreen() {
 
     if (validEnrolled && rm) {
       const [{ data: ls }, { data: lp }] = await Promise.all([
-        supabase.from('lessons').select('*').eq('roadmap_id', rm.id).eq('is_active', true).order('sort_order'),
+        supabase.from('lessons').select('*, sections(id, title_ar, sort_order, description_ar)').eq('roadmap_id', rm.id).eq('is_active', true).order('sort_order'),
         supabase.from('user_lesson_progress').select('lesson_id').eq('user_id', user!.id).eq('completed', true),
       ])
       setLessons(ls || [])
@@ -98,6 +98,22 @@ export default function CourseDetailScreen() {
 
   const completedCount = lessons.filter(l => completedIds.has(l.id)).length
   const pct = lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0
+
+  // Group lessons by section
+  const sectionsMap: Record<string, any[]> = {}
+  for (const lesson of lessons) {
+    const key = lesson.section_id || '__none__'
+    if (!sectionsMap[key]) sectionsMap[key] = []
+    sectionsMap[key].push(lesson)
+  }
+  // Sort sections by sort_order
+  const sortedSectionEntries = Object.entries(sectionsMap).sort(([aKey, aLessons], [bKey, bLessons]) => {
+    if (aKey === '__none__') return 1
+    if (bKey === '__none__') return -1
+    const aOrder = (aLessons[0] as any)?.sections?.sort_order || 999
+    const bOrder = (bLessons[0] as any)?.sections?.sort_order || 999
+    return aOrder - bOrder
+  })
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -150,36 +166,62 @@ export default function CourseDetailScreen() {
                 <Text style={s.emptyText}>{isAr ? 'الدروس قادمة قريباً' : 'Lessons coming soon'}</Text>
               </View>
             ) : (
-              lessons.map((lesson, i) => {
-                const done     = completedIds.has(lesson.id)
-                const prevDone = i === 0 || completedIds.has(lessons[i-1].id)
-                const locked   = !done && !prevDone && i > 0
+              // ── Grouped by sections ──
+              sortedSectionEntries.map(([secId, secLessons]) => {
+                const secInfo = secId === '__none__' ? null : (secLessons[0] as any)?.sections
+                const globalOffset = lessons.indexOf(secLessons[0])
                 return (
-                  <TouchableOpacity
-                    key={lesson.id}
-                    style={[s.lessonCard, done && { borderColor: meta.color, borderWidth: 2 }, locked && { opacity: 0.6 }]}
-                    onPress={() => !locked && router.push(`/lesson/${lesson.id}` as any)}
-                    disabled={locked}
-                    activeOpacity={locked ? 1 : 0.8}>
-                    <View style={[s.lessonNum, {
-                      backgroundColor: done ? meta.color : locked ? Colors.border : meta.bg,
-                      borderColor: done ? meta.color : locked ? Colors.border : meta.color + '60',
-                    }]}>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: done ? '#fff' : locked ? Colors.textMuted : meta.color }}>
-                        {done ? '✓' : locked ? '🔒' : String(i + 1)}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.lessonTitle, locked && { color: Colors.textMuted }]}>
-                        {isAr ? lesson.title_ar : (lesson.title || lesson.title_ar)}
-                      </Text>
-                      <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
-                        <Text style={s.lessonMeta}>⏱️ {Math.floor((lesson.video_duration_seconds || 600) / 60)}{isAr ? 'د' : 'm'}</Text>
-                        <Text style={[s.lessonMeta, { color: done ? Colors.green : meta.color, fontWeight: '800' }]}>+{lesson.xp_reward} XP</Text>
+                  <View key={secId} style={{ marginBottom: 12 }}>
+                    {/* Section header */}
+                    {secInfo && (
+                      <View style={[s.sectionHeader, { borderColor: meta.color + '40' }]}>
+                        <Text style={s.sectionIcon}>📂</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[s.sectionTitle, { color: meta.color }]}>{secInfo.title_ar}</Text>
+                          {secInfo.description_ar ? (
+                            <Text style={s.sectionDesc}>{secInfo.description_ar}</Text>
+                          ) : null}
+                        </View>
+                        <View style={[s.sectionCount, { backgroundColor: meta.bg }]}>
+                          <Text style={[s.sectionCountText, { color: meta.color }]}>{(secLessons as any[]).length}</Text>
+                        </View>
                       </View>
-                    </View>
-                    {!locked && !done && <Text style={{ fontSize: 18, color: meta.color }}>←</Text>}
-                  </TouchableOpacity>
+                    )}
+                    {/* Lessons in section */}
+                    {(secLessons as any[]).map((lesson, i) => {
+                      const globalIdx = globalOffset + i
+                      const done     = completedIds.has(lesson.id)
+                      const prevDone = globalIdx === 0 || completedIds.has(lessons[globalIdx - 1]?.id)
+                      const locked   = !done && !prevDone && globalIdx > 0
+                      return (
+                        <TouchableOpacity
+                          key={lesson.id}
+                          style={[s.lessonCard, done && { borderColor: meta.color, borderWidth: 2 }, locked && { opacity: 0.6 }]}
+                          onPress={() => !locked && router.push(('/lesson/' + lesson.id) as any)}
+                          disabled={locked}
+                          activeOpacity={locked ? 1 : 0.8}>
+                          <View style={[s.lessonNum, {
+                            backgroundColor: done ? meta.color : locked ? Colors.border : meta.bg,
+                            borderColor: done ? meta.color : locked ? Colors.border : meta.color + '60',
+                          }]}>
+                            <Text style={{ fontSize: 14, fontWeight: '800', color: done ? '#fff' : locked ? Colors.textMuted : meta.color }}>
+                              {done ? '✓' : locked ? '🔒' : String(globalIdx + 1)}
+                            </Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[s.lessonTitle, locked && { color: Colors.textMuted }]}>
+                              {isAr ? lesson.title_ar : (lesson.title || lesson.title_ar)}
+                            </Text>
+                            <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
+                              <Text style={s.lessonMeta}>⏱️ {Math.floor((lesson.video_duration_seconds || 600) / 60)}{isAr ? 'د' : 'm'}</Text>
+                              <Text style={[s.lessonMeta, { color: done ? Colors.green : meta.color, fontWeight: '800' }]}>+{lesson.xp_reward} XP</Text>
+                            </View>
+                          </View>
+                          {!locked && !done && <Text style={{ fontSize: 18, color: meta.color }}>←</Text>}
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </View>
                 )
               })
             )}
@@ -283,6 +325,12 @@ const s = StyleSheet.create({
   lessonNum:    { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, flexShrink: 0 },
   lessonTitle:  { fontSize: 15, fontWeight: '700', color: Colors.text, textAlign: 'right', marginBottom: 5 },
   lessonMeta:   { fontSize: 11, color: Colors.textSub },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 2, borderLeftWidth: 0, borderRightWidth: 0, borderTopWidth: 0 },
+  sectionIcon:   { fontSize: 20 },
+  sectionTitle:  { fontSize: 15, fontWeight: '800', textAlign: 'right' },
+  sectionDesc:   { fontSize: 12, color: Colors.textSub, textAlign: 'right', marginTop: 2 },
+  sectionCount:  { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, minWidth: 32, alignItems: 'center' },
+  sectionCountText: { fontSize: 13, fontWeight: '900' },
 
   priceCard:    { backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 14, borderWidth: 2 },
   priceRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

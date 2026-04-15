@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Alert, ActivityIndicator,
-  Platform,
 } from 'react-native'
 import { useLocalSearchParams, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import * as DocumentPicker from 'expo-document-picker'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
+
+const MAX_SIZE = 10 * 1024 * 1024 // 10MB
 
 export default function ChallengeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -23,6 +25,8 @@ export default function ChallengeScreen() {
   const [isCorrect, setIsCorrect]   = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submission, setSubmission] = useState<any>(null)
+  const [pickedFile, setPickedFile] = useState<any>(null)
+  const [uploading, setUploading]   = useState(false)
 
   useEffect(() => { if (id) load() }, [id])
 
@@ -32,7 +36,6 @@ export default function ChallengeScreen() {
     setLoading(false)
 
     if (user && data) {
-      // Check MCQ attempt
       if (data.challenge_type === 'complete_sentence') {
         const { data: att } = await supabase
           .from('user_challenge_attempts')
@@ -40,7 +43,6 @@ export default function ChallengeScreen() {
           .eq('user_id', user.id).eq('challenge_id', id).maybeSingle()
         if (att) { setSelected(att.selected_answer); setAnswered(true); setIsCorrect(att.is_correct) }
       }
-      // Check image submission
       if (data.challenge_type === 'node_analysis') {
         const { data: sub } = await supabase
           .from('task_submissions')
@@ -50,6 +52,7 @@ export default function ChallengeScreen() {
     }
   }
 
+  // ── MCQ Submit ──────────────────────────────────────────────
   const submitMCQ = async () => {
     if (selected === null || !user || !challenge) return
     setSubmitting(true)
@@ -70,15 +73,94 @@ export default function ChallengeScreen() {
     setSubmitting(false)
   }
 
-  const pickAndUploadFile = async () => {
-    if (!user || !challenge) return
-    Alert.alert(
-      isAr ? '📤 رفع الصورة' : '📤 Upload Image',
-      isAr
-        ? 'لرفع صورة، استخدم التطبيق على الموبايل بعد تحديث البناء.\n\nالنسخة الحالية تدعم رفع الملفات في الـ Build القادم.'
-        : 'Image upload will be fully available in the next build.\n\nPlease update the app to access this feature.',
-      [{ text: isAr ? 'حسناً' : 'OK' }]
-    )
+  // ── Pick File ───────────────────────────────────────────────
+  const pickFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*'],
+        copyToCacheDirectory: true,
+      })
+      if (result.canceled) return
+      const file = result.assets[0]
+      if (file.size && file.size > MAX_SIZE) {
+        Alert.alert(
+          isAr ? '❌ الملف كبير' : '❌ File too large',
+          isAr ? 'الحد الأقصى 10 ميجابايت' : 'Maximum 10MB per file'
+        )
+        return
+      }
+      setPickedFile(file)
+    } catch (e: any) {
+      Alert.alert(isAr ? 'خطأ' : 'Error', e.message)
+    }
+  }
+
+  // ── Upload & Submit ─────────────────────────────────────────
+  const uploadAndSubmit = async () => {
+    if (!pickedFile || !user || !challenge) return
+    setUploading(true)
+    try {
+      // Read file
+      const response = await fetch(pickedFile.uri)
+      const blob = await response.blob()
+
+      const ext = pickedFile.name.split('.').pop() || 'jpg'
+      const filePath = `${user.id}/${challenge.id}_${Date.now()}.${ext}`
+
+      // Upload to Supabase Storage
+      const { error: uploadErr } = await supabase.storage
+        .from('task-submissions')
+        .upload(filePath, blob, {
+          contentType: pickedFile.mimeType || 'image/jpeg',
+          upsert: true,
+        })
+
+      if (uploadErr) throw new Error(isAr ? 'فشل رفع الصورة: ' + uploadErr.message : 'Upload failed: ' + uploadErr.message)
+
+      // Get URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('task-submissions')
+        .getPublicUrl(filePath)
+
+      // Save submission
+      const { error: subErr } = await supabase.from('task_submissions').upsert({
+        user_id: user.id,
+        challenge_id: challenge.id,
+        file_url: publicUrl,
+        file_name: pickedFile.name,
+        file_size_bytes: pickedFile.size || 0,
+        file_type: pickedFile.mimeType || 'image/jpeg',
+        status: 'pending',
+      }, { onConflict: 'user_id,challenge_id' })
+
+      if (subErr) throw subErr
+
+      // Admin notification
+      await supabase.from('admin_notifications').insert({
+        type: 'task_submission',
+        title: '📩 تسليم تحدي صورة',
+        body: `${user.full_name || user.email} رفع صورة للتحدي: ${challenge.title_ar}`,
+        data: {
+          user_id: user.id,
+          user_name: user.full_name || user.email,
+          challenge_id: challenge.id,
+          challenge_title: challenge.title_ar,
+          file_url: publicUrl,
+          file_name: pickedFile.name,
+        },
+      })
+
+      setPickedFile(null)
+      load() // Refresh to show submission status
+      Alert.alert(
+        isAr ? '✅ تم الرفع!' : '✅ Uploaded!',
+        isAr ? 'تم رفع الصورة وسيتم تحليلها قريباً' : 'Image uploaded and will be analyzed soon'
+      )
+    } catch (e: any) {
+      Alert.alert(isAr ? 'خطأ' : 'Error', e.message)
+    } finally {
+      setUploading(false)
+    }
   }
 
   if (loading) return (
@@ -99,17 +181,17 @@ export default function ChallengeScreen() {
   )
 
   const isNodeAnalysis = challenge.challenge_type === 'node_analysis'
-  const isMCQ = challenge.challenge_type === 'complete_sentence'
+  const isMCQ          = challenge.challenge_type === 'complete_sentence'
 
   const statusColors: Record<string, string> = {
     pending: Colors.orange, reviewing: Colors.blue,
-    approved: Colors.green, rejected: Colors.red
+    approved: Colors.green, rejected: Colors.red,
   }
   const statusLabels: Record<string, string> = {
-    pending: isAr ? '⏳ في انتظار المراجعة' : '⏳ Pending Review',
+    pending:   isAr ? '⏳ في انتظار المراجعة' : '⏳ Pending Review',
     reviewing: isAr ? '👀 قيد المراجعة' : '👀 Under Review',
-    approved: isAr ? '✅ تمت الموافقة' : '✅ Approved',
-    rejected: isAr ? '❌ مرفوض' : '❌ Rejected',
+    approved:  isAr ? '✅ تمت الموافقة' : '✅ Approved',
+    rejected:  isAr ? '❌ مرفوض' : '❌ Rejected',
   }
 
   return (
@@ -127,35 +209,26 @@ export default function ChallengeScreen() {
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Challenge type badge */}
+        {/* Type badge */}
         <View style={s.typeBadge}>
           <Text style={s.typeText}>
             {isNodeAnalysis
-              ? (isAr ? '📸 تحدي رفع صورة' : '📸 Image Upload Challenge')
+              ? (isAr ? '📸 تحدي رفع صورة + تحليل AI' : '📸 Image Upload + AI Analysis')
               : (isAr ? '❓ سؤال اختياري' : '❓ Multiple Choice')}
           </Text>
         </View>
 
-        {/* ── NODE ANALYSIS (Image Upload) ── */}
+        {/* ════ NODE ANALYSIS (Image Upload) ════ */}
         {isNodeAnalysis && (
           <>
             <View style={s.questionBox}>
               <Text style={s.questionText}>
                 {challenge.question_ar || challenge.description_ar ||
-                  (isAr ? 'ارفع صورة للـ Node المطلوب' : 'Upload an image of the required Node')}
+                  (isAr ? 'ارفع صورة الـ Node المطلوب' : 'Upload the required Node screenshot')}
               </Text>
             </View>
 
-            {/* Reference image if exists */}
-            {challenge.image_url && (
-              <View style={s.refImageBox}>
-                <Text style={s.refImageLabel}>
-                  {isAr ? '📌 الصورة المرجعية:' : '📌 Reference image:'}
-                </Text>
-              </View>
-            )}
-
-            {/* Submission status */}
+            {/* Already submitted */}
             {submission ? (
               <View style={[s.statusCard, {
                 borderColor: (statusColors[submission.status] || Colors.orange) + '60',
@@ -165,39 +238,63 @@ export default function ChallengeScreen() {
                   {statusLabels[submission.status] || submission.status}
                 </Text>
                 <Text style={s.submittedFile}>📎 {submission.file_name}</Text>
+
                 {submission.admin_notes && (
                   <View style={s.adminNotes}>
                     <Text style={s.adminNotesLabel}>{isAr ? '💬 ملاحظة:' : '💬 Note:'}</Text>
                     <Text style={s.adminNotesText}>{submission.admin_notes}</Text>
                   </View>
                 )}
+
                 {submission.status === 'approved' && (
                   <Text style={s.xpEarned}>🎉 +{challenge.xp_reward} XP!</Text>
                 )}
+
+                {/* Allow resubmit if rejected */}
+                {submission.status === 'rejected' && (
+                  <TouchableOpacity style={[s.pickBtn, { marginTop: 12 }]} onPress={pickFile}>
+                    <Text style={{ fontSize: 24, marginBottom: 4 }}>📁</Text>
+                    <Text style={s.pickText}>{isAr ? 'رفع صورة جديدة' : 'Upload new image'}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
+              /* Upload section */
               <View style={s.uploadCard}>
                 <Text style={s.uploadTitle}>{isAr ? '📤 ارفع صورتك' : '📤 Upload Your Image'}</Text>
                 <Text style={s.uploadNote}>
                   {isAr
-                    ? 'ارفع صورة الـ Node المطلوب — سيتم تحليلها بواسطة Gemini AI'
-                    : 'Upload the required Node screenshot — it will be analyzed by Gemini AI'}
+                    ? 'ارفع صورة PNG أو JPG للـ Node المطلوب — سيتم مراجعتها وإضافة XP عند الموافقة'
+                    : 'Upload PNG or JPG of the required Node — will be reviewed and XP awarded on approval'}
                 </Text>
-                <TouchableOpacity style={s.uploadBtn} onPress={pickAndUploadFile}>
-                  <Text style={{ fontSize: 40, marginBottom: 8 }}>📁</Text>
-                  <Text style={s.uploadBtnText}>
-                    {isAr ? 'اختر صورة (JPG / PNG)' : 'Choose image (JPG / PNG)'}
-                  </Text>
-                  <Text style={s.uploadBtnNote}>
-                    {isAr ? 'الحد الأقصى: 10MB' : 'Max: 10MB'}
-                  </Text>
-                </TouchableOpacity>
+
+                {pickedFile ? (
+                  /* File picked - show preview */
+                  <View style={s.filePreview}>
+                    <View style={s.filePreviewInfo}>
+                      <Text style={s.filePreviewName} numberOfLines={1}>🖼️ {pickedFile.name}</Text>
+                      <Text style={s.filePreviewSize}>
+                        {((pickedFile.size || 0) / 1024 / 1024).toFixed(2)} MB
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setPickedFile(null)} style={s.removeBtn}>
+                      <Text style={{ color: '#fca5a5', fontSize: 14, fontWeight: '700' }}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  /* Pick button */
+                  <TouchableOpacity style={s.pickBtn} onPress={pickFile}>
+                    <Text style={{ fontSize: 40, marginBottom: 8 }}>📷</Text>
+                    <Text style={s.pickText}>{isAr ? 'اختر صورة (JPG / PNG)' : 'Choose image (JPG / PNG)'}</Text>
+                    <Text style={s.pickNote}>{isAr ? 'الحد الأقصى: 10 ميجابايت' : 'Max: 10MB'}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </>
         )}
 
-        {/* ── MCQ CHALLENGE ── */}
+        {/* ════ MCQ ════ */}
         {isMCQ && (
           <>
             <View style={s.questionBox}>
@@ -248,6 +345,7 @@ export default function ChallengeScreen() {
 
       {/* Footer */}
       <View style={s.footer}>
+        {/* MCQ footer */}
         {isMCQ && (
           answered ? (
             <TouchableOpacity
@@ -270,7 +368,20 @@ export default function ChallengeScreen() {
             </TouchableOpacity>
           )
         )}
-        {isNodeAnalysis && (
+
+        {/* Node analysis footer */}
+        {isNodeAnalysis && !submission && pickedFile && (
+          <TouchableOpacity
+            style={[s.actionBtn, { backgroundColor: Colors.purple, opacity: uploading ? 0.7 : 1 }]}
+            onPress={uploadAndSubmit}
+            disabled={uploading}>
+            {uploading
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={s.actionBtnText}>{isAr ? '🚀 رفع الصورة' : '🚀 Upload Image'}</Text>}
+          </TouchableOpacity>
+        )}
+
+        {isNodeAnalysis && (!pickedFile || submission) && (
           <TouchableOpacity style={[s.actionBtn, { backgroundColor: '#334155' }]} onPress={() => router.back()}>
             <Text style={s.actionBtnText}>{isAr ? '← رجوع' : '← Back'}</Text>
           </TouchableOpacity>
@@ -281,42 +392,45 @@ export default function ChallengeScreen() {
 }
 
 const s = StyleSheet.create({
-  container:       { flex: 1, backgroundColor: '#0f172a' },
-  center:          { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
-  header:          { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, borderBottomWidth: 1, borderBottomColor: '#1e293b' },
-  backBtn:         { width: 36, height: 36, justifyContent: 'center' },
-  backText:        { fontSize: 22, color: Colors.purple, fontWeight: '700' },
-  headerTitle:     { flex: 1, fontSize: 15, fontWeight: '800', color: '#fff' },
-  xpBadge:         { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  xpText:          { fontSize: 13, fontWeight: '800' },
-  scroll:          { padding: 16 },
-  typeBadge:       { backgroundColor: '#1e293b', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-end', marginBottom: 12 },
-  typeText:        { color: '#94a3b8', fontSize: 12, fontWeight: '700' },
-  questionBox:     { backgroundColor: '#1e293b', borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: '#334155' },
-  questionText:    { fontSize: 15, fontWeight: '700', color: '#e2e8f0', textAlign: 'right', lineHeight: 24 },
-  refImageBox:     { marginBottom: 12 },
-  refImageLabel:   { color: '#64748b', fontSize: 12, marginBottom: 6 },
-  uploadCard:      { backgroundColor: '#1e293b', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: '#334155' },
-  uploadTitle:     { fontSize: 15, fontWeight: '800', color: '#e2e8f0', textAlign: 'right', marginBottom: 6 },
-  uploadNote:      { fontSize: 13, color: '#94a3b8', textAlign: 'right', marginBottom: 14, lineHeight: 20 },
-  uploadBtn:       { borderRadius: 12, borderWidth: 2, borderColor: '#334155', borderStyle: 'dashed', padding: 24, alignItems: 'center' },
-  uploadBtnText:   { color: '#64748b', fontSize: 14, fontWeight: '600' },
-  uploadBtnNote:   { color: '#475569', fontSize: 11, marginTop: 4 },
-  statusCard:      { borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2 },
-  statusTitle:     { fontSize: 16, fontWeight: '900', marginBottom: 8, textAlign: 'right' },
-  submittedFile:   { fontSize: 13, color: '#64748b', textAlign: 'right', marginBottom: 8 },
-  adminNotes:      { backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: 12, marginTop: 8 },
-  adminNotesLabel: { fontSize: 12, fontWeight: '700', color: '#94a3b8', marginBottom: 4 },
-  adminNotesText:  { fontSize: 13, color: '#e2e8f0', lineHeight: 20 },
-  xpEarned:        { fontSize: 15, fontWeight: '800', color: Colors.green, textAlign: 'center', marginTop: 10 },
-  option:          { borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 2, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  optLabel:        { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
-  explanation:     { backgroundColor: '#1e293b', borderRadius: 14, padding: 14, marginTop: 8, borderWidth: 2 },
-  explanationTitle:{ fontSize: 13, fontWeight: '800', color: '#94a3b8', marginBottom: 6 },
-  explanationText: { fontSize: 14, color: '#e2e8f0', lineHeight: 22, textAlign: 'right' },
-  footer:          { padding: 16, borderTopWidth: 1, borderTopColor: '#1e293b' },
-  actionBtn:       { borderRadius: 14, padding: 17, alignItems: 'center' },
-  actionBtnText:   { fontSize: 16, fontWeight: '900', color: '#fff' },
-  btn:             { backgroundColor: Colors.blue, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
-  btnText:         { color: '#fff', fontWeight: '800', fontSize: 14 },
+  container:        { flex: 1, backgroundColor: '#0f172a' },
+  center:           { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
+  header:           { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, borderBottomWidth: 1, borderBottomColor: '#1e293b' },
+  backBtn:          { width: 36, height: 36, justifyContent: 'center' },
+  backText:         { fontSize: 22, color: Colors.purple, fontWeight: '700' },
+  headerTitle:      { flex: 1, fontSize: 15, fontWeight: '800', color: '#fff' },
+  xpBadge:          { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  xpText:           { fontSize: 13, fontWeight: '800' },
+  scroll:           { padding: 16 },
+  typeBadge:        { backgroundColor: '#1e293b', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-end', marginBottom: 12 },
+  typeText:         { color: '#94a3b8', fontSize: 12, fontWeight: '700' },
+  questionBox:      { backgroundColor: '#1e293b', borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: '#334155' },
+  questionText:     { fontSize: 15, fontWeight: '700', color: '#e2e8f0', textAlign: 'right', lineHeight: 24 },
+  uploadCard:       { backgroundColor: '#1e293b', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: '#334155' },
+  uploadTitle:      { fontSize: 15, fontWeight: '800', color: '#e2e8f0', textAlign: 'right', marginBottom: 6 },
+  uploadNote:       { fontSize: 13, color: '#94a3b8', textAlign: 'right', marginBottom: 14, lineHeight: 20 },
+  pickBtn:          { borderRadius: 12, borderWidth: 2, borderColor: '#334155', borderStyle: 'dashed', padding: 28, alignItems: 'center' },
+  pickText:         { color: '#e2e8f0', fontSize: 14, fontWeight: '600' },
+  pickNote:         { color: '#475569', fontSize: 11, marginTop: 4 },
+  filePreview:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f172a', borderRadius: 12, padding: 12, marginBottom: 4 },
+  filePreviewInfo:  { flex: 1 },
+  filePreviewName:  { color: '#e2e8f0', fontSize: 14, fontWeight: '600', textAlign: 'right' },
+  filePreviewSize:  { color: '#64748b', fontSize: 12, textAlign: 'right', marginTop: 2 },
+  removeBtn:        { width: 30, height: 30, borderRadius: 15, backgroundColor: '#7f1d1d', justifyContent: 'center', alignItems: 'center' },
+  statusCard:       { borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2 },
+  statusTitle:      { fontSize: 16, fontWeight: '900', marginBottom: 8, textAlign: 'right' },
+  submittedFile:    { fontSize: 13, color: '#64748b', textAlign: 'right', marginBottom: 8 },
+  adminNotes:       { backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: 12, marginTop: 8 },
+  adminNotesLabel:  { fontSize: 12, fontWeight: '700', color: '#94a3b8', marginBottom: 4 },
+  adminNotesText:   { fontSize: 13, color: '#e2e8f0', lineHeight: 20 },
+  xpEarned:         { fontSize: 15, fontWeight: '800', color: Colors.green, textAlign: 'center', marginTop: 10 },
+  option:           { borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 2, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  optLabel:         { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
+  explanation:      { backgroundColor: '#1e293b', borderRadius: 14, padding: 14, marginTop: 8, borderWidth: 2 },
+  explanationTitle: { fontSize: 13, fontWeight: '800', color: '#94a3b8', marginBottom: 6 },
+  explanationText:  { fontSize: 14, color: '#e2e8f0', lineHeight: 22, textAlign: 'right' },
+  footer:           { padding: 16, borderTopWidth: 1, borderTopColor: '#1e293b' },
+  actionBtn:        { borderRadius: 14, padding: 17, alignItems: 'center' },
+  actionBtnText:    { fontSize: 16, fontWeight: '900', color: '#fff' },
+  btn:              { backgroundColor: Colors.blue, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
+  btnText:          { color: '#fff', fontWeight: '800', fontSize: 14 },
 })

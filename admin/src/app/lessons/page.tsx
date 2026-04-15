@@ -20,6 +20,7 @@ const EMPTY_LESSON = {
   content_blocks: [] as Block[],
   resources: [] as any[],
   linked_challenge_id: '',
+  section_id: '',
 }
 
 function extractVimeoId(input: string): string {
@@ -31,10 +32,47 @@ function extractVimeoId(input: string): string {
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 
+
+// ── LessonRow Component ─────────────────────────────────────
+function LessonRow({ l, i, isSel, toggleSelect, edit, del, challenges, COLORS, rColor }: any) {
+  const hasVimeo = l.vimeo_id
+  const hasChallenge = l.linked_challenge_id
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: '1px solid #0f172a', background: isSel ? '#1e3a2e' : i % 2 === 0 ? 'transparent' : '#ffffff05', cursor: 'default' }}>
+      <div onClick={() => toggleSelect(l.id)} style={{ width: 16, height: 16, borderRadius: 3, border: `2px solid ${isSel ? '#58CC02' : '#475569'}`, background: isSel ? '#58CC02' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+        {isSel && <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>✓</span>}
+      </div>
+      <span style={{ color: '#475569', fontSize: 11, minWidth: 20 }}>{l.sort_order}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: 13 }}>{l.title_ar}</div>
+        {l.sections?.title_ar && <div style={{ fontSize: 10, color: '#64748b' }}>📂 {l.sections.title_ar}</div>}
+      </div>
+      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+        {hasVimeo && <span style={{ background: '#1a3a5c', color: '#60a5fa', borderRadius: 4, padding: '1px 6px', fontSize: 10 }}>🎬</span>}
+        {l.video_url && !hasVimeo && <span style={{ background: '#3a1a1a', color: '#f87171', borderRadius: 4, padding: '1px 6px', fontSize: 10 }}>📺</span>}
+        {hasChallenge && <span style={{ background: '#2d1a4e', color: '#a78bfa', borderRadius: 4, padding: '1px 6px', fontSize: 10 }}>⚔️</span>}
+        {l.is_free && <span style={{ background: '#166534', color: '#4ade80', borderRadius: 4, padding: '1px 6px', fontSize: 10 }}>🆓</span>}
+      </div>
+      <span style={{ color: '#fbbf24', fontWeight: 700, fontSize: 12, minWidth: 35 }}>{l.xp_reward} XP</span>
+      <span style={{ background: l.is_active ? '#166534' : '#7f1d1d', color: l.is_active ? '#bbf7d0' : '#fca5a5', borderRadius: 4, padding: '1px 8px', fontSize: 10 }}>
+        {l.is_active ? 'نشط' : 'مخفي'}
+      </span>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button onClick={() => edit(l)} style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 10 }}>تعديل</button>
+        <button onClick={() => del(l.id)} style={{ padding: '3px 8px', borderRadius: 4, border: '1px solid #7f1d1d', background: 'transparent', color: '#f87171', cursor: 'pointer', fontSize: 10 }}>حذف</button>
+      </div>
+    </div>
+  )
+}
+
 export default function LessonsPage() {
   const [items, setItems] = useState<any[]>([])
   const [challenges, setChallenges] = useState<any[]>([])
   const [roadmaps, setRoadmaps] = useState<any[]>([])
+  const [sections, setSections] = useState<any[]>([])
+  const [showSectionForm, setShowSectionForm] = useState(false)
+  const [sectionForm, setSectionForm] = useState({ title_ar: '', description_ar: '', roadmap_id: '', sort_order: 1 })
+  const [editingSection, setEditingSection] = useState<string | null>(null)
   const [entryType, setEntryType] = useState<EntryType>('lesson')
   const [form, setForm] = useState<any>({ ...EMPTY_LESSON })
   const [editing, setEditing] = useState<string | null>(null)
@@ -61,14 +99,16 @@ export default function LessonsPage() {
   useEffect(() => { load() }, [])
 
   const load = async () => {
-    const [l, r, c] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/lessons?select=*,roadmaps(title_ar,slug)&order=roadmap_id,sort_order`, { headers: H }).then(r => r.json()),
+    const [l, r, c, s] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/lessons?select=*,roadmaps(title_ar,slug),sections(title_ar)&order=roadmap_id,sort_order`, { headers: H }).then(r => r.json()),
       fetch(`${SUPABASE_URL}/rest/v1/roadmaps?select=*&order=sort_order`, { headers: H }).then(r => r.json()),
       fetch(`${SUPABASE_URL}/rest/v1/challenges?select=id,title_ar,challenge_type&order=created_at.desc`, { headers: H }).then(r => r.json()),
+      fetch(`${SUPABASE_URL}/rest/v1/sections?select=*&order=roadmap_id,sort_order`, { headers: H }).then(r => r.json()),
     ])
     setItems(Array.isArray(l) ? l : [])
     setRoadmaps(Array.isArray(r) ? r : [])
     setChallenges(Array.isArray(c) ? c : [])
+    setSections(Array.isArray(s) ? s : [])
     setSelected(new Set())
   }
 
@@ -136,6 +176,7 @@ export default function LessonsPage() {
       content_blocks: form.content_blocks || [],
       resources: form.resources || [],
       linked_challenge_id: form.linked_challenge_id || null,
+      section_id: form.section_id || null,
     }
 
     let res: Response
@@ -266,6 +307,45 @@ export default function LessonsPage() {
     setTimeout(() => setMsg(''), 6000)
   }
 
+
+  // ── Section CRUD ──
+  const saveSection = async () => {
+    if (!sectionForm.roadmap_id) { setMsg('❌ اختر المسار'); setTimeout(() => setMsg(''), 3000); return }
+    if (!sectionForm.title_ar)   { setMsg('❌ اكتب عنوان السكشن'); setTimeout(() => setMsg(''), 3000); return }
+    setSaving(true)
+    const payload = { ...sectionForm, sort_order: Number(sectionForm.sort_order) || 1, title: sectionForm.title_ar }
+    let res: Response
+    if (editingSection) {
+      res = await fetch(`${SUPABASE_URL}/rest/v1/sections?id=eq.${editingSection}`, { method: 'PATCH', headers: H, body: JSON.stringify(payload) })
+    } else {
+      res = await fetch(`${SUPABASE_URL}/rest/v1/sections`, { method: 'POST', headers: H, body: JSON.stringify(payload) })
+    }
+    if (res.ok || res.status === 201 || res.status === 204) {
+      setMsg(editingSection ? '✅ تم تعديل السكشن' : '✅ تم إضافة السكشن')
+      setShowSectionForm(false)
+      setEditingSection(null)
+      setSectionForm({ title_ar: '', description_ar: '', roadmap_id: '', sort_order: 1 })
+      load()
+    } else {
+      const err = await res.json().catch(() => ({}))
+      setMsg('❌ ' + (err?.message || err?.details || res.status))
+    }
+    setSaving(false)
+    setTimeout(() => setMsg(''), 4000)
+  }
+
+  const deleteSection = async (id: string) => {
+    if (!confirm('حذف هذا السكشن؟ الدروس المرتبطة به لن تُحذف.')) return
+    await fetch(`${SUPABASE_URL}/rest/v1/sections?id=eq.${id}`, { method: 'DELETE', headers: H })
+    load()
+  }
+
+  const editSection = (sec: any) => {
+    setEditingSection(sec.id)
+    setSectionForm({ title_ar: sec.title_ar, description_ar: sec.description_ar || '', roadmap_id: sec.roadmap_id, sort_order: sec.sort_order })
+    setShowSectionForm(true)
+  }
+
   const resetForm = () => {
     setForm({ ...EMPTY_LESSON }); setEditing(null); setShowForm(false)
     setVimeoPreview(null); setEntryType('lesson')
@@ -281,7 +361,7 @@ export default function LessonsPage() {
 
   const edit = (l: any) => {
     setEntryType('lesson')
-    setForm({ ...EMPTY_LESSON, ...l, roadmap_id: l.roadmap_id || '', content_blocks: l.content_blocks || [], resources: l.resources || [], linked_challenge_id: l.linked_challenge_id || '' })
+    setForm({ ...EMPTY_LESSON, ...l, roadmap_id: l.roadmap_id || '', content_blocks: l.content_blocks || [], resources: l.resources || [], linked_challenge_id: l.linked_challenge_id || '', section_id: l.section_id || '' })
     setEditing(l.id)
     if (l.vimeo_id) setVimeoPreview(`https://player.vimeo.com/video/${l.vimeo_id}?title=0&byline=0&portrait=0`)
     setShowForm(true)
@@ -306,6 +386,12 @@ export default function LessonsPage() {
   }
 
   const filtered = items.filter(l => !filter || l.roadmap_id === filter)
+  // Group by roadmap then sections
+  const roadmapSections = (roadmapId: string) => sections.filter(s => s.roadmap_id === roadmapId).sort((a: any, b: any) => a.sort_order - b.sort_order)
+  const sectionLessons = (secId: string | null, roadmapId: string) => 
+    secId === null 
+      ? filtered.filter(l => l.roadmap_id === roadmapId && !l.section_id)
+      : filtered.filter(l => l.section_id === secId)
   const COLORS: Record<string, string> = { n8n_automation: '#58CC02', ai_video: '#FF9600', vibe_coding: '#CE82FF' }
   const allSel = filtered.length > 0 && selected.size === filtered.length
   const someSel = selected.size > 0
@@ -315,10 +401,16 @@ export default function LessonsPage() {
       <header style={{ background: '#1e293b', borderBottom: '1px solid #334155', padding: '16px 32px', display: 'flex', alignItems: 'center', gap: 16 }}>
         <Link href="/" style={{ color: '#64748b', textDecoration: 'none', fontSize: 20 }}>←</Link>
         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#e2e8f0' }}>📚 إدارة المحتوى</h1>
-        <button onClick={() => { resetForm(); setShowForm(true) }}
-          style={{ marginRight: 'auto', padding: '8px 20px', borderRadius: 8, border: 'none', background: '#58CC02', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
-          + محتوى جديد
-        </button>
+        <div style={{ marginRight: 'auto', display: 'flex', gap: 8 }}>
+          <button onClick={() => { setEditingSection(null); setSectionForm({ title_ar: '', description_ar: '', roadmap_id: '', sort_order: 1 }); setShowSectionForm(true) }}
+            style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #1CB0F6', background: 'transparent', color: '#1CB0F6', fontWeight: 700, cursor: 'pointer' }}>
+            + سكشن جديد
+          </button>
+          <button onClick={() => { resetForm(); setShowForm(true) }}
+            style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#58CC02', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+            + درس جديد
+          </button>
+        </div>
       </header>
 
       {msg && <div style={{ background: msg.startsWith('✅') ? '#166534' : '#7f1d1d', color: msg.startsWith('✅') ? '#bbf7d0' : '#fca5a5', padding: '12px 32px', fontSize: 14, fontWeight: 600 }}>{msg}</div>}
@@ -354,76 +446,113 @@ export default function LessonsPage() {
           <span style={{ marginRight: 'auto', fontSize: 12, color: '#475569' }}>{filtered.length} عنصر</span>
         </div>
 
-        {/* Table */}
-        <div style={{ background: '#1e293b', borderRadius: 12, border: '1px solid #334155', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #334155', background: '#0f172a' }}>
-                <th style={{ padding: '10px 12px', width: 36 }}></th>
-                {['#', 'العنوان', 'المسار', 'الفيديو', 'المحتوى', 'XP', 'الحالة', ''].map(h => (
-                  <th key={h} style={{ padding: '10px 12px', textAlign: 'right', fontSize: 11, color: '#64748b', fontWeight: 600 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((l, i) => {
-                const isSel = selected.has(l.id)
-                const hasVimeo = l.vimeo_id
-                const hasBlocks = l.content_blocks?.length > 0
-                const hasResources = l.resources?.length > 0
-                const hasChallenge = l.linked_challenge_id
-                const linkedCh = hasChallenge ? challenges.find((ch: any) => ch.id === l.linked_challenge_id) : null
+        {/* Grouped by roadmap → sections → lessons */}
+        {(filter ? roadmaps.filter(r => r.id === filter) : roadmaps).map(r => {
+          const rSections = roadmapSections(r.id)
+          const unsectioned = sectionLessons(null, r.id)
+          const rColor = COLORS[r.slug] || '#58CC02'
+          const rEmoji = r.slug === 'n8n_automation' ? '⚡' : r.slug === 'ai_video' ? '🎬' : '💻'
+          const totalLessons = filtered.filter(l => l.roadmap_id === r.id).length
+          if (totalLessons === 0 && rSections.length === 0) return null
+          return (
+            <div key={r.id} style={{ marginBottom: 24 }}>
+              {/* Roadmap header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: rColor + '15', borderRadius: 12, borderRight: `4px solid ${rColor}`, marginBottom: 8 }}>
+                <span style={{ fontSize: 20 }}>{rEmoji}</span>
+                <span style={{ fontWeight: 800, color: rColor, fontSize: 16 }}>{r.title_ar}</span>
+                <span style={{ fontSize: 12, color: '#64748b' }}>{totalLessons} درس — {rSections.length} سكشن</span>
+              </div>
+
+              {/* Sections */}
+              {rSections.map((sec: any) => {
+                const secLessons = sectionLessons(sec.id, r.id)
                 return (
-                  <tr key={l.id} style={{ borderBottom: '1px solid #1e293b', background: isSel ? '#1e3a2e' : i % 2 === 0 ? 'transparent' : '#ffffff05' }}>
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                      <div onClick={() => toggleSelect(l.id)} style={{ width: 16, height: 16, borderRadius: 3, border: `2px solid ${isSel ? '#58CC02' : '#475569'}`, background: isSel ? '#58CC02' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        {isSel && <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>✓</span>}
+                  <div key={sec.id} style={{ marginBottom: 12, marginRight: 8 }}>
+                    {/* Section header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#1e293b', borderRadius: '10px 10px 0 0', borderBottom: '2px solid ' + rColor + '40' }}>
+                      <span style={{ fontSize: 14 }}>📂</span>
+                      <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 14 }}>{sec.title_ar}</span>
+                      <span style={{ fontSize: 11, color: '#64748b' }}>{secLessons.length} درس</span>
+                      <div style={{ marginRight: 'auto', display: 'flex', gap: 6 }}>
+                        <button onClick={() => editSection(sec)} style={{ padding: '2px 8px', borderRadius: 4, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 10 }}>تعديل</button>
+                        <button onClick={() => deleteSection(sec.id)} style={{ padding: '2px 8px', borderRadius: 4, border: '1px solid #7f1d1d', background: 'transparent', color: '#f87171', cursor: 'pointer', fontSize: 10 }}>حذف</button>
+                        <button onClick={() => { resetForm(); setForm((f: any) => ({ ...f, roadmap_id: r.id, section_id: sec.id })); setShowForm(true) }}
+                          style={{ padding: '2px 10px', borderRadius: 4, border: 'none', background: '#58CC0230', color: '#4ade80', cursor: 'pointer', fontSize: 10 }}>+ درس</button>
                       </div>
-                    </td>
-                    <td style={{ padding: '10px 12px', color: '#64748b', fontSize: 12 }}>{l.sort_order}</td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: 14 }}>{l.title_ar}</div>
-                      {l.description_ar && <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>{l.description_ar.slice(0, 50)}...</div>}
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <span style={{ background: (COLORS[l.roadmaps?.slug] || '#58CC02') + '25', color: COLORS[l.roadmaps?.slug] || '#58CC02', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
-                        {l.roadmaps?.title_ar || '—'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>
-                      {hasVimeo ? (
-                        <span style={{ background: '#1a3a5c', color: '#60a5fa', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>🎬 Vimeo</span>
-                      ) : l.video_url ? (
-                        <span style={{ background: '#3a1a1a', color: '#f87171', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>📺 YT</span>
-                      ) : <span style={{ color: '#475569', fontSize: 11 }}>—</span>}
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {hasBlocks && <span style={{ background: '#1e3a2e', color: '#4ade80', borderRadius: 6, padding: '2px 6px', fontSize: 10 }}>📝 {l.content_blocks.length}</span>}
-                        {hasResources && <span style={{ background: '#1e293b', color: '#94a3b8', borderRadius: 6, padding: '2px 6px', fontSize: 10 }}>📎 {l.resources.length}</span>}
-                        {hasChallenge && <span style={{ background: '#2d1a4e', color: '#a78bfa', borderRadius: 6, padding: '2px 6px', fontSize: 10 }}>⚔️</span>}
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 12px', color: '#fbbf24', fontWeight: 700, fontSize: 13 }}>{l.xp_reward}</td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <span style={{ background: l.is_active ? '#166534' : '#7f1d1d', color: l.is_active ? '#bbf7d0' : '#fca5a5', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>
-                        {l.is_active ? 'نشط' : 'مخفي'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => edit(l)} style={{ padding: '3px 10px', borderRadius: 5, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 11 }}>تعديل</button>
-                        <button onClick={() => del(l.id)} style={{ padding: '3px 10px', borderRadius: 5, border: '1px solid #7f1d1d', background: 'transparent', color: '#f87171', cursor: 'pointer', fontSize: 11 }}>حذف</button>
-                      </div>
-                    </td>
-                  </tr>
+                    </div>
+                    {/* Lessons in section */}
+                    <div style={{ background: '#1e293b', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+                      {secLessons.length === 0 ? (
+                        <div style={{ padding: '12px 16px', color: '#475569', fontSize: 12, textAlign: 'center' }}>لا يوجد دروس في هذا السكشن بعد</div>
+                      ) : secLessons.map((l: any, i: number) => (
+                        <LessonRow key={l.id} l={l} i={i} isSel={selected.has(l.id)} toggleSelect={toggleSelect} edit={edit} del={del} challenges={challenges} COLORS={COLORS} rColor={rColor} />
+                      ))}
+                    </div>
+                  </div>
                 )
               })}
-            </tbody>
-          </table>
-          {filtered.length === 0 && <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>لا يوجد محتوى — اضغط "+ محتوى جديد"</div>}
-        </div>
+
+              {/* Unsectioned lessons */}
+              {unsectioned.length > 0 && (
+                <div style={{ marginRight: 8 }}>
+                  <div style={{ padding: '6px 14px', background: '#0f172a', borderRadius: '10px 10px 0 0', borderBottom: '1px dashed #334155' }}>
+                    <span style={{ fontSize: 12, color: '#475569' }}>📄 دروس بدون سكشن ({unsectioned.length})</span>
+                  </div>
+                  <div style={{ background: '#1e293b', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+                    {unsectioned.map((l: any, i: number) => (
+                      <LessonRow key={l.id} l={l} i={i} isSel={selected.has(l.id)} toggleSelect={toggleSelect} edit={edit} del={del} challenges={challenges} COLORS={COLORS} rColor={rColor} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+        {filtered.length === 0 && sections.length === 0 && <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>لا يوجد محتوى — اضغط "+ درس جديد"</div>}
       </div>
+
+      {/* ══ SECTION FORM MODAL ══ */}
+      {showSectionForm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
+          <div style={{ background: '#1e293b', borderRadius: 16, width: '100%', maxWidth: 480, border: '1px solid #334155' }}>
+            <div style={{ padding: '18px 24px', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0, fontSize: 17, color: '#e2e8f0' }}>📂 {editingSection ? 'تعديل السكشن' : 'سكشن جديد'}</h2>
+              <button onClick={() => { setShowSectionForm(false); setEditingSection(null) }} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: '#334155', color: '#94a3b8', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>المسار *</label>
+                <select value={sectionForm.roadmap_id} onChange={e => setSectionForm(f => ({ ...f, roadmap_id: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${sectionForm.roadmap_id ? '#1CB0F6' : '#334155'}`, background: '#0f172a', color: '#fff', fontSize: 14, boxSizing: 'border-box' }}>
+                  <option value="">اختر المسار</option>
+                  {roadmaps.map((r: any) => <option key={r.id} value={r.id}>{r.title_ar}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>عنوان السكشن بالعربي *</label>
+                <input value={sectionForm.title_ar} onChange={e => setSectionForm(f => ({ ...f, title_ar: e.target.value }))}
+                  placeholder="مثال: مقدمة في n8n"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${sectionForm.title_ar ? '#1CB0F6' : '#334155'}`, background: '#0f172a', color: '#fff', fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>وصف السكشن (اختياري)</label>
+                <textarea value={sectionForm.description_ar} onChange={e => setSectionForm(f => ({ ...f, description_ar: e.target.value }))}
+                  rows={2} placeholder="ما الذي سيتعلمه الطالب في هذا السكشن؟"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>الترتيب</label>
+                <input type="number" value={sectionForm.sort_order} onChange={e => setSectionForm(f => ({ ...f, sort_order: Number(e.target.value) }))}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+              <button onClick={saveSection} disabled={saving}
+                style={{ padding: '14px', borderRadius: 10, border: 'none', background: saving ? '#334155' : '#1CB0F6', color: '#fff', fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer', fontSize: 15 }}>
+                {saving ? '⏳ جاري الحفظ...' : (editingSection ? '✅ حفظ التعديلات' : '📂 إنشاء السكشن')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ MAIN FORM MODAL ══ */}
       {showForm && (
@@ -631,6 +760,21 @@ export default function LessonsPage() {
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  {/* ── Section selector ── */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#1CB0F6', fontWeight: 700, marginBottom: 6 }}>📂 السكشن (اختياري)</label>
+                    <select value={form.section_id || ''} onChange={e => setForm((f: any) => ({ ...f, section_id: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${form.section_id ? '#1CB0F6' : '#334155'}`, background: '#0f172a', color: '#fff', fontSize: 14 }}>
+                      <option value="">بدون سكشن</option>
+                      {sections.filter((s: any) => !form.roadmap_id || s.roadmap_id === form.roadmap_id).map((s: any) => (
+                        <option key={s.id} value={s.id}>📂 {s.title_ar}</option>
+                      ))}
+                    </select>
+                    {form.section_id && (
+                      <div style={{ fontSize: 11, color: '#1CB0F6', marginTop: 4 }}>✅ سيظهر الدرس ضمن هذا السكشن</div>
+                    )}
                   </div>
 
                   {/* ── Link Challenge ── */}
