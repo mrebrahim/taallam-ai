@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, ActivityIndicator, Image, Modal, Animated, Easing,
+  TouchableOpacity, ActivityIndicator, Modal,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useAuth } from '@/hooks/useAuth'
@@ -29,41 +29,49 @@ function getLvl(xp: number) {
   return { cur, nxt, prog, toNext: Math.max(0, nxt.xp - xp) }
 }
 
-// ── Sticker System ────────────────────────────────────────────
-// Stickers from getstickerpack.com — Pushkas (Egyptian) + Ana Byh (Gulf)
-const BASE = 'https://s3.getstickerpack.com/storage/uploads/sticker-pack/'
-const STICKERS = {
-  // days absent → sticker URL + funny Arabic message
-  d2:  { url: BASE + 'pushkas-bwshkash/sticker_3.webp?38a38d7deecb5815fe1774706d9d0291', msg: 'يومين ومعملتش حاجة؟ 😤 انت بتعمل إيه بالظبط؟!' },
-  d3:  { url: BASE + 'pushkas-bwshkash/sticker_7.webp?38a38d7deecb5815fe1774706d9d0291', msg: '3 أيام! الكورس بيعيط عليك 😭 ارجع بقى!' },
-  d4:  { url: BASE + 'pushkas-bwshkash/sticker_11.webp?38a38d7deecb5815fe1774706d9d0291', msg: '4 أيام!! الكورس نسيك تقريباً 😒' },
-  d5:  { url: BASE + 'pushkas-bwshkash/sticker_14.webp?38a38d7deecb5815fe1774706d9d0291', msg: '5 أيام ولا درس واحد؟! بوشكاش بيحكم عليك 👀' },
-  d7:  { url: BASE + 'ana-byh-abn-byh/sticker_2.webp?38a38d7deecb5815fe1774706d9d0291',  msg: 'أسبوع كامل! وين كنت يا زلمة؟ 😅' },
-  d10: { url: BASE + 'pushkas-bwshkash/sticker_18.webp?38a38d7deecb5815fe1774706d9d0291', msg: '10 أيام! اللي اتعلمته بدأ ينسى 😬 سريع!' },
-  d14: { url: BASE + 'ana-byh-abn-byh/sticker_5.webp?38a38d7deecb5815fe1774706d9d0291',  msg: 'أسبوعين! يا خسارة على الفلوس اللي دفعتها 😅' },
-  d21: { url: BASE + 'pushkas-bwshkash/sticker_22.webp?38a38d7deecb5815fe1774706d9d0291', msg: '3 أسابيع! بجد مش قادر تفتح الابليكيشن؟ 😤' },
-  d30: { url: BASE + 'ana-byh-abn-byh/sticker_8.webp?38a38d7deecb5815fe1774706d9d0291',  msg: 'شهر! ما شاء الله عليك... على الغياب 👋' },
-}
+// ── Absence Alert System ─────────────────────────────────────
+type AbsenceAlert = { emoji: string; title: string; msg: string; sub: string; color: string; bg: string }
+
+const ABSENCE_ALERTS: Array<{ minDays: number } & AbsenceAlert> = [
+  { minDays: 30, emoji: '👻', title: 'شهر كامل!',     color: '#ef4444', bg: '#450a0a',
+    msg: 'ما شاء الله عليك... على الغياب!',
+    sub: 'الكورس بقى ينادي عليك من بعيد 👋' },
+  { minDays: 21, emoji: '🥱', title: '٣ أسابيع!',    color: '#f97316', bg: '#431407',
+    msg: 'بجد مش قادر تفتح الابليكيشن؟ 😤',
+    sub: 'حتى الموبايل بيتعجب منك' },
+  { minDays: 14, emoji: '💸', title: 'أسبوعين!',     color: '#eab308', bg: '#422006',
+    msg: 'يا خسارة على الفلوس اللي دفعتها 😅',
+    sub: 'الكورس موجود.. إنت اللي مش موجود' },
+  { minDays: 10, emoji: '🫠', title: '١٠ أيام!',     color: '#a855f7', bg: '#2e1065',
+    msg: 'اللي اتعلمته بدأ ينسى 😬',
+    sub: 'مش هينفع كده يا صاحبي' },
+  { minDays: 7,  emoji: '🤦', title: 'أسبوع كامل!', color: '#6366f1', bg: '#1e1b4b',
+    msg: 'وين كنت يا زلمة؟ 😅',
+    sub: 'حتى الـ streak بكى عليك' },
+  { minDays: 5,  emoji: '👀', title: '٥ أيام!',      color: '#3b82f6', bg: '#172554',
+    msg: 'بوشكاش بيحكم عليك 👀',
+    sub: 'ولا درس واحد؟ جد؟!' },
+  { minDays: 4,  emoji: '😒', title: '٤ أيام!',      color: '#14b8a6', bg: '#042f2e',
+    msg: 'الكورس نسيك تقريباً 😒',
+    sub: 'مش هو المشكلة.. إنت المشكلة' },
+  { minDays: 3,  emoji: '😭', title: '٣ أيام!',      color: '#22c55e', bg: '#052e16',
+    msg: 'الكورس بيعيط عليك 😭',
+    sub: 'ارجع بقى يا حبيبي!' },
+  { minDays: 2,  emoji: '😤', title: 'يومين!',       color: '#f59e0b', bg: '#1c1917',
+    msg: 'إنت بتعمل إيه بالظبط؟!',
+    sub: 'يومين من غير ما تذاكر؟' },
+]
 
 function getDaysAbsent(lastActivityDate: string | null): number {
   if (!lastActivityDate) return 0
   const last = new Date(lastActivityDate)
   const now  = new Date()
-  const diff = Math.floor((now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24))
-  return diff
+  return Math.floor((now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24))
 }
 
-function getStickerForDays(days: number): { url: string; msg: string } | null {
-  if (days >= 30) return STICKERS.d30
-  if (days >= 21) return STICKERS.d21
-  if (days >= 14) return STICKERS.d14
-  if (days >= 10) return STICKERS.d10
-  if (days >= 7)  return STICKERS.d7
-  if (days >= 5)  return STICKERS.d5
-  if (days >= 4)  return STICKERS.d4
-  if (days >= 3)  return STICKERS.d3
-  if (days >= 2)  return STICKERS.d2
-  return null
+function getAlertForDays(days: number): AbsenceAlert | null {
+  const match = ABSENCE_ALERTS.find(a => days >= a.minDays)
+  return match ? { emoji: match.emoji, title: match.title, msg: match.msg, sub: match.sub, color: match.color, bg: match.bg } : null
 }
 
 
@@ -163,30 +171,43 @@ export default function HomeScreen() {
   const streakColor = getStreakColor(streak)
   const narMsg      = getNarMsg(streak, user.full_name || user.username || '', isAr)
   const daysAbsent  = getDaysAbsent(user.last_activity_date || null)
-  const sticker     = !stickerDismissed ? getStickerForDays(daysAbsent) : null
+  const alert       = !stickerDismissed ? getAlertForDays(daysAbsent) : null
   const enrolledList = roadmaps.filter(r => enrollments.has(r.id))
   const pctBar      = lvl.prog
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      {/* ── Sticker Popup ── */}
-      <Modal visible={!!sticker} transparent animationType="fade" onRequestClose={() => setStickerDismissed(true)}>
+      {/* ── Absence Alert Popup ── */}
+      <Modal visible={!!alert} transparent animationType="slide" onRequestClose={() => setStickerDismissed(true)}>
         <View style={s.stickerOverlay}>
-          <TouchableOpacity style={s.stickerCard} activeOpacity={1} onPress={() => setStickerDismissed(true)}>
-            <Text style={s.stickerDays}>{daysAbsent} {daysAbsent === 1 ? 'يوم' : 'أيام'} غياب!</Text>
-            {sticker && (
-              <Image
-                source={{ uri: sticker.url }}
-                style={s.stickerImg}
-                resizeMode="contain"
-              />
-            )}
-            {sticker && <Text style={s.stickerMsg}>{sticker.msg}</Text>}
-            <TouchableOpacity style={s.stickerBtn} onPress={() => setStickerDismissed(true)}>
+          <View style={[s.stickerCard, { backgroundColor: alert?.bg || '#0f172a', borderColor: alert?.color + '50' || '#334155' }]}>
+            {/* Emoji big */}
+            <View style={[s.stickerEmojiBubble, { backgroundColor: alert?.color + '20' || '#334155' }]}>
+              <Text style={s.stickerEmojiText}>{alert?.emoji || '😴'}</Text>
+            </View>
+            {/* Title */}
+            <Text style={[s.stickerDays, { color: alert?.color || '#fff' }]}>
+              {alert?.title}
+            </Text>
+            {/* Message */}
+            <Text style={s.stickerMsg}>{alert?.msg}</Text>
+            <Text style={s.stickerSub}>{alert?.sub}</Text>
+            {/* Days badge */}
+            <View style={[s.stickerDaysBadge, { backgroundColor: alert?.color + '20', borderColor: alert?.color + '40' }]}>
+              <Text style={[s.stickerDaysBadgeTxt, { color: alert?.color }]}>
+                {daysAbsent} {daysAbsent === 1 ? 'يوم' : 'أيام'} غياب 📅
+              </Text>
+            </View>
+            {/* CTA Button */}
+            <TouchableOpacity
+              style={[s.stickerBtn, { backgroundColor: alert?.color }]}
+              onPress={() => setStickerDismissed(true)}>
               <Text style={s.stickerBtnTxt}>😅 هروح أذاكر دلوقتي!</Text>
             </TouchableOpacity>
-            <Text style={s.stickerTap}>اضغط في أي مكان للإغلاق</Text>
-          </TouchableOpacity>
+            <TouchableOpacity onPress={() => setStickerDismissed(true)} style={{ marginTop: 10 }}>
+              <Text style={s.stickerTap}>مش دلوقتي ←</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
 
