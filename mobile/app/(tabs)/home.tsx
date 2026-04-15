@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, ActivityIndicator,
+  TouchableOpacity, ActivityIndicator, Image, Modal, Animated, Easing,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useAuth } from '@/hooks/useAuth'
@@ -28,6 +28,44 @@ function getLvl(xp: number) {
   const prog = nxt.xp > cur.xp ? Math.min(100, Math.round(((xp - cur.xp) / (nxt.xp - cur.xp)) * 100)) : 100
   return { cur, nxt, prog, toNext: Math.max(0, nxt.xp - xp) }
 }
+
+// ── Sticker System ────────────────────────────────────────────
+// Stickers from getstickerpack.com — Pushkas (Egyptian) + Ana Byh (Gulf)
+const BASE = 'https://s3.getstickerpack.com/storage/uploads/sticker-pack/'
+const STICKERS = {
+  // days absent → sticker URL + funny Arabic message
+  d2:  { url: BASE + 'pushkas-bwshkash/sticker_3.webp?38a38d7deecb5815fe1774706d9d0291', msg: 'يومين ومعملتش حاجة؟ 😤 انت بتعمل إيه بالظبط؟!' },
+  d3:  { url: BASE + 'pushkas-bwshkash/sticker_7.webp?38a38d7deecb5815fe1774706d9d0291', msg: '3 أيام! الكورس بيعيط عليك 😭 ارجع بقى!' },
+  d4:  { url: BASE + 'pushkas-bwshkash/sticker_11.webp?38a38d7deecb5815fe1774706d9d0291', msg: '4 أيام!! الكورس نسيك تقريباً 😒' },
+  d5:  { url: BASE + 'pushkas-bwshkash/sticker_14.webp?38a38d7deecb5815fe1774706d9d0291', msg: '5 أيام ولا درس واحد؟! بوشكاش بيحكم عليك 👀' },
+  d7:  { url: BASE + 'ana-byh-abn-byh/sticker_2.webp?38a38d7deecb5815fe1774706d9d0291',  msg: 'أسبوع كامل! وين كنت يا زلمة؟ 😅' },
+  d10: { url: BASE + 'pushkas-bwshkash/sticker_18.webp?38a38d7deecb5815fe1774706d9d0291', msg: '10 أيام! اللي اتعلمته بدأ ينسى 😬 سريع!' },
+  d14: { url: BASE + 'ana-byh-abn-byh/sticker_5.webp?38a38d7deecb5815fe1774706d9d0291',  msg: 'أسبوعين! يا خسارة على الفلوس اللي دفعتها 😅' },
+  d21: { url: BASE + 'pushkas-bwshkash/sticker_22.webp?38a38d7deecb5815fe1774706d9d0291', msg: '3 أسابيع! بجد مش قادر تفتح الابليكيشن؟ 😤' },
+  d30: { url: BASE + 'ana-byh-abn-byh/sticker_8.webp?38a38d7deecb5815fe1774706d9d0291',  msg: 'شهر! ما شاء الله عليك... على الغياب 👋' },
+}
+
+function getDaysAbsent(lastActivityDate: string | null): number {
+  if (!lastActivityDate) return 0
+  const last = new Date(lastActivityDate)
+  const now  = new Date()
+  const diff = Math.floor((now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24))
+  return diff
+}
+
+function getStickerForDays(days: number): { url: string; msg: string } | null {
+  if (days >= 30) return STICKERS.d30
+  if (days >= 21) return STICKERS.d21
+  if (days >= 14) return STICKERS.d14
+  if (days >= 10) return STICKERS.d10
+  if (days >= 7)  return STICKERS.d7
+  if (days >= 5)  return STICKERS.d5
+  if (days >= 4)  return STICKERS.d4
+  if (days >= 3)  return STICKERS.d3
+  if (days >= 2)  return STICKERS.d2
+  return null
+}
+
 
 function getNarMsg(streak: number, name: string, isAr: boolean): string {
   const n = (name || '').split(' ')[0] || (isAr ? 'بطل' : 'Champion')
@@ -64,6 +102,7 @@ export default function HomeScreen() {
   const [todayChallenge, setTodayChallenge] = useState<any>(null)
   const [challengeDone, setChallengeDone]   = useState(false)
   const [freezeCount, setFreezeCount] = useState(0)
+  const [stickerDismissed, setStickerDismissed] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -123,11 +162,33 @@ export default function HomeScreen() {
   const lvl         = getLvl(xp)
   const streakColor = getStreakColor(streak)
   const narMsg      = getNarMsg(streak, user.full_name || user.username || '', isAr)
+  const daysAbsent  = getDaysAbsent(user.last_activity_date || null)
+  const sticker     = !stickerDismissed ? getStickerForDays(daysAbsent) : null
   const enrolledList = roadmaps.filter(r => enrollments.has(r.id))
   const pctBar      = lvl.prog
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
+      {/* ── Sticker Popup ── */}
+      <Modal visible={!!sticker} transparent animationType="fade" onRequestClose={() => setStickerDismissed(true)}>
+        <View style={s.stickerOverlay}>
+          <TouchableOpacity style={s.stickerCard} activeOpacity={1} onPress={() => setStickerDismissed(true)}>
+            <Text style={s.stickerDays}>{daysAbsent} {daysAbsent === 1 ? 'يوم' : 'أيام'} غياب!</Text>
+            {sticker && (
+              <Image
+                source={{ uri: sticker.url }}
+                style={s.stickerImg}
+                resizeMode="contain"
+              />
+            )}
+            {sticker && <Text style={s.stickerMsg}>{sticker.msg}</Text>}
+            <TouchableOpacity style={s.stickerBtn} onPress={() => setStickerDismissed(true)}>
+              <Text style={s.stickerBtnTxt}>😅 هروح أذاكر دلوقتي!</Text>
+            </TouchableOpacity>
+            <Text style={s.stickerTap}>اضغط في أي مكان للإغلاق</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
 
       {/* Header */}
       <View style={s.header}>
