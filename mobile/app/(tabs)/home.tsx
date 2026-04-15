@@ -340,7 +340,8 @@ export default function HomeScreen() {
                   <Text style={[s.coursePct, { color: meta.color }]}>{pct}%</Text>
                 </TouchableOpacity>
               )
-            })}\n          </View>
+            })}
+          </View>
         )}
 
         {/* ── All Courses ── */}
