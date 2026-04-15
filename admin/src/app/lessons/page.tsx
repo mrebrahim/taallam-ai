@@ -569,7 +569,7 @@ export default function LessonsPage() {
               {/* Type Selector — Lesson or Challenge */}
               {!editing && (
                 <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-                  {([['lesson', '📚', 'درس', 'فيديو + محتوى + مصادر'], ['challenge', '⚔️', 'تحدي', 'MCQ أو رفع صورة + Gemini AI']] as [EntryType, string, string, string][]).map(([type, icon, label, desc]) => (
+                  {([['lesson', '📚', 'درس', 'فيديو + محتوى + مصادر'], ['challenge', '⚔️', 'تحدي', 'MCQ أو رفع صورة أو فيديو يوتيوب']] as [EntryType, string, string, string][]).map(([type, icon, label, desc]) => (
                     <button key={type} onClick={() => setEntryType(type)}
                       style={{ flex: 1, padding: '14px', borderRadius: 10, border: `2px solid ${entryType === type ? (type === 'lesson' ? '#58CC02' : '#CE82FF') : '#334155'}`, background: entryType === type ? (type === 'lesson' ? '#1e3a2e' : '#2d1a4e') : 'transparent', cursor: 'pointer', textAlign: 'right' }}>
                       <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
@@ -857,10 +857,11 @@ export default function LessonsPage() {
                   {/* Challenge Type */}
                   <div>
                     <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 8, fontWeight: 600 }}>نوع التحدي *</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                       {[
-                        ['complete_sentence', '❓', 'أكمل الجملة', 'اختيار من 4 خيارات'],
-                        ['node_analysis', '📸', 'تحليل Node', 'الطالب يرفع screenshot + Gemini يصحح'],
+                        ['complete_sentence', '❓', 'سؤال MCQ', 'اختيار من 4 خيارات'],
+                        ['node_analysis', '📸', 'رفع صورة', 'الطالب يرفع صورة للمراجعة'],
+                        ['video_submission', '🎥', 'فيديو يوتيوب', 'الطالب يرفع رابط فيديو شرح'],
                       ].map(([type, icon, label, desc]) => (
                         <button key={type} type="button" onClick={() => setChallengeForm((f: any) => ({ ...f, challenge_type: type }))}
                           style={{ padding: '12px', borderRadius: 8, border: `2px solid ${challengeForm.challenge_type === type ? '#CE82FF' : '#334155'}`, background: challengeForm.challenge_type === type ? '#2d1a4e' : 'transparent', cursor: 'pointer', textAlign: 'right' }}>

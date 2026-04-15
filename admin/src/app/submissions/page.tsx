@@ -195,9 +195,14 @@ export default function SubmissionsPage() {
                       {sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString('ar-EG') : '—'}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
-                      <span style={{ background: (STATUS_COLORS[sub.status] || '#64748b') + '20', color: STATUS_COLORS[sub.status] || '#64748b', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
-                        {STATUS_LABELS[sub.status] || sub.status}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ background: (STATUS_COLORS[sub.status] || '#64748b') + '20', color: STATUS_COLORS[sub.status] || '#64748b', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
+                          {STATUS_LABELS[sub.status] || sub.status}
+                        </span>
+                        <span style={{ fontSize: 10, color: '#475569' }}>
+                          {sub.submission_type === 'youtube' ? '🎥 فيديو' : '📎 صورة'}
+                        </span>
+                      </div>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <button onClick={() => { setSelected(sub); setAdminNotes(sub.admin_notes || '') }}
@@ -237,16 +242,41 @@ export default function SubmissionsPage() {
                 <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>⚡ {selected.challenge?.xp_reward} XP عند الموافقة</div>
               </div>
 
-              {/* File */}
+              {/* File / YouTube */}
               <div style={{ background: '#0f172a', borderRadius: 10, padding: 14, marginBottom: 16 }}>
-                <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 8 }}>الملف المرفوع</div>
-                <a href={selected.file_url} target="_blank" rel="noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#60a5fa', textDecoration: 'none', padding: '10px 14px', background: '#1e293b', borderRadius: 8 }}>
-                  <span style={{ fontSize: 20 }}>📎</span>
-                  <span style={{ flex: 1, fontSize: 13 }}>{selected.file_name}</span>
-                  <span style={{ fontSize: 11, color: '#475569' }}>{formatSize(selected.file_size_bytes || 0)}</span>
-                  <span style={{ fontSize: 12, color: '#3b82f6' }}>↗ فتح</span>
-                </a>
+                <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 8 }}>
+                  {selected.submission_type === 'youtube' ? '🎥 فيديو يوتيوب' : '📎 الملف المرفوع'}
+                </div>
+                {selected.submission_type === 'youtube' ? (
+                  <div>
+                    <a href={selected.youtube_url || selected.file_url} target="_blank" rel="noreferrer"
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#60a5fa', textDecoration: 'none', padding: '10px 14px', background: '#1e293b', borderRadius: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 20 }}>🎥</span>
+                      <span style={{ flex: 1, fontSize: 12, wordBreak: 'break-all' }}>{selected.youtube_url || selected.file_url}</span>
+                      <span style={{ fontSize: 12, color: '#3b82f6', flexShrink: 0 }}>↗ مشاهدة</span>
+                    </a>
+                    {/* YouTube Embed Preview */}
+                    {(() => {
+                      const url = selected.youtube_url || selected.file_url || ''
+                      const match = url.match(/(?:v=|youtu\.be\/)([\w-]{11})/)
+                      return match ? (
+                        <iframe
+                          src={`https://www.youtube.com/embed/${match[1]}`}
+                          style={{ width: '100%', height: 200, borderRadius: 8, border: 'none' }}
+                          allowFullScreen
+                        />
+                      ) : null
+                    })()}
+                  </div>
+                ) : (
+                  <a href={selected.file_url} target="_blank" rel="noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#60a5fa', textDecoration: 'none', padding: '10px 14px', background: '#1e293b', borderRadius: 8 }}>
+                    <span style={{ fontSize: 20 }}>📎</span>
+                    <span style={{ flex: 1, fontSize: 13 }}>{selected.file_name}</span>
+                    <span style={{ fontSize: 11, color: '#475569' }}>{formatSize(selected.file_size_bytes || 0)}</span>
+                    <span style={{ fontSize: 12, color: '#3b82f6' }}>↗ فتح</span>
+                  </a>
+                )}
               </div>
 
               {/* Admin notes */}
