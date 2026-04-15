@@ -34,7 +34,7 @@ export default function ChallengesScreen() {
   const loadData = async () => {
     try {
       const [{ data: ch, error: chErr }, { data: att }] = await Promise.all([
-        supabase.from('challenges').select('*').eq('is_active', true).order('sort_order'),
+        supabase.from('challenges').select('*').eq('is_active', true).is('linked_lesson_id', null).order('sort_order'),
         supabase.from('user_challenge_attempts').select('*').eq('user_id', user!.id),
       ])
       if (chErr) throw chErr
