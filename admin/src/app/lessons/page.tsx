@@ -179,8 +179,11 @@ export default function LessonsPage() {
   const saveChallenge = async () => {
     if (!challengeForm.title_ar) { setMsg('❌ اكتب عنوان التحدي'); setTimeout(() => setMsg(''), 3000); return }
     if (!challengeForm.question_ar) { setMsg('❌ اكتب السؤال'); setTimeout(() => setMsg(''), 3000); return }
-    if (challengeForm.options && challengeForm.options.some((o: string) => !o.trim())) {
-      setMsg('❌ أكمل كل الخيارات'); setTimeout(() => setMsg(''), 3000); return
+    // Only validate options for MCQ challenges
+    if (challengeForm.challenge_type === 'complete_sentence' && 
+        challengeForm.options && 
+        challengeForm.options.some((o: string) => !o.trim())) {
+      setMsg('❌ أكمل كل الخيارات الأربعة'); setTimeout(() => setMsg(''), 3000); return
     }
     setSaving(true)
 
@@ -219,11 +222,13 @@ export default function LessonsPage() {
       setEntryType('lesson')
       load() // Refresh challenges list
     } else {
-      const err = await res.json().catch(() => ({}))
-      setMsg('❌ ' + (err?.message || err?.details || res.status))
+      const errBody = await res.json().catch(() => ({}))
+      const errMsg = errBody?.message || errBody?.details || errBody?.hint || ('HTTP ' + res.status)
+      console.error('Challenge save error:', errBody)
+      setMsg('❌ خطأ في حفظ التحدي: ' + errMsg)
     }
     setSaving(false)
-    setTimeout(() => setMsg(''), 5000)
+    setTimeout(() => setMsg(''), 6000)
   }
 
   const resetForm = () => {
