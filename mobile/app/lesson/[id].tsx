@@ -77,6 +77,8 @@ export default function LessonScreen() {
   const [completed, setCompleted]     = useState(false)
   const [completing, setCompleting]   = useState(false)
   const [videoError, setVideoError]   = useState(false)
+  const [linkedChallenge, setLinkedChallenge] = useState<any>(null)
+  const [showChallengeBanner, setShowChallengeBanner] = useState(false)
   const [isBackground, setIsBackground] = useState(false)
   const loadAttempts = useRef(0)
 
@@ -107,6 +109,7 @@ export default function LessonScreen() {
           id, title_ar, description_ar,
           lesson_type, video_url, vimeo_id, vimeo_url,
           video_duration_seconds, xp_reward, is_free, roadmap_id,
+          linked_challenge_id,
           roadmaps (title_ar, slug)
         `)
         .eq('id', id)
@@ -122,6 +125,15 @@ export default function LessonScreen() {
       }
       setLesson(data)
       Analytics.lessonStart(data.id, data.title_ar || '')
+      // Load linked challenge if exists
+      if (data.linked_challenge_id) {
+        const { data: ch } = await supabase
+          .from('challenges')
+          .select('id, title_ar, xp_reward, difficulty, challenge_type')
+          .eq('id', data.linked_challenge_id)
+          .single()
+        if (ch) setLinkedChallenge(ch)
+      }
     } catch (e: any) {
       Alert.alert(
         isAr ? 'خطأ' : 'Error',
@@ -156,6 +168,10 @@ export default function LessonScreen() {
         .eq('id', user.id)
       setCompleted(true)
       Analytics.lessonComplete(id as string, lesson.xp_reward || 50)
+      if (linkedChallenge) {
+        setShowChallengeBanner(true)
+        return
+      }
       Alert.alert(
         isAr ? '🎉 أحسنت!' : '🎉 Well Done!',
         isAr ? `حصلت على ${lesson.xp_reward || 50} XP 🔥` : `You earned ${lesson.xp_reward || 50} XP 🔥`,
@@ -296,6 +312,36 @@ export default function LessonScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
+      {/* Challenge Banner after lesson completion */}
+      {showChallengeBanner && linkedChallenge && (
+        <View style={s.challengeBannerOverlay}>
+          <View style={s.challengeBanner}>
+            <Text style={s.challengeBannerTitle}>🎉 {isAr ? 'أحسنت! أكملت الدرس' : 'Well Done! Lesson Complete'}</Text>
+            <Text style={s.challengeBannerXP}>+{lesson?.xp_reward || 50} XP {isAr ? 'تم إضافتها' : 'earned'} ⚡</Text>
+            <View style={s.challengeBannerCard}>
+              <Text style={s.challengeBannerNext}>{isAr ? '⚔️ يوجد تحدي بعد هذا الدرس!' : '⚔️ There is a challenge for this lesson!'}</Text>
+              <Text style={s.challengeBannerName}>{linkedChallenge.title_ar}</Text>
+              <Text style={s.challengeBannerXP2}>+{linkedChallenge.xp_reward} XP</Text>
+            </View>
+            <View style={s.challengeBannerBtns}>
+              <TouchableOpacity
+                style={s.challengeStartBtn}
+                onPress={() => {
+                  setShowChallengeBanner(false)
+                  router.replace(`/challenge/${linkedChallenge.id}` as any)
+                }}>
+                <Text style={s.challengeStartBtnText}>{isAr ? '⚔️ ابدأ التحدي' : '⚔️ Start Challenge'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.challengeSkipBtn}
+                onPress={() => { setShowChallengeBanner(false); router.back() }}>
+                <Text style={s.challengeSkipBtnText}>{isAr ? 'تخطي' : 'Skip'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Footer */}
       <View style={s.footer}>
         {!user ? (
@@ -351,4 +397,18 @@ const s = StyleSheet.create({
   completeBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
   loginNote:       { backgroundColor: '#1e293b', borderRadius: 12, padding: 14, alignItems: 'center' },
   loginNoteText:   { color: '#64748b', fontSize: 14 },
+  // Challenge banner
+  challengeBannerOverlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 24, zIndex: 100 },
+  challengeBanner: { backgroundColor: '#1e293b', borderRadius: 20, padding: 24, width: '100%', borderWidth: 2, borderColor: '#334155' },
+  challengeBannerTitle: { fontSize: 20, fontWeight: '900', color: '#fff', textAlign: 'center', marginBottom: 4 },
+  challengeBannerXP: { fontSize: 14, color: Colors.green, textAlign: 'center', fontWeight: '700', marginBottom: 16 },
+  challengeBannerCard: { backgroundColor: '#0f172a', borderRadius: 14, padding: 16, marginBottom: 20, borderWidth: 2, borderColor: Colors.purple + '40' },
+  challengeBannerNext: { fontSize: 14, color: Colors.purple, fontWeight: '700', textAlign: 'right', marginBottom: 6 },
+  challengeBannerName: { fontSize: 16, fontWeight: '900', color: '#fff', textAlign: 'right', marginBottom: 4 },
+  challengeBannerXP2: { fontSize: 13, color: Colors.orange, fontWeight: '700', textAlign: 'right' },
+  challengeBannerBtns: { gap: 10 },
+  challengeStartBtn: { backgroundColor: Colors.purple, borderRadius: 14, padding: 16, alignItems: 'center' },
+  challengeStartBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  challengeSkipBtn: { backgroundColor: '#334155', borderRadius: 12, padding: 12, alignItems: 'center' },
+  challengeSkipBtnText: { color: '#94a3b8', fontSize: 14, fontWeight: '600' },
 })

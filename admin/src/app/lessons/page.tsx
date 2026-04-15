@@ -310,6 +310,7 @@ export default function LessonsPage() {
                 const hasBlocks = l.content_blocks?.length > 0
                 const hasResources = l.resources?.length > 0
                 const hasChallenge = l.linked_challenge_id
+                const linkedCh = hasChallenge ? challenges.find((ch: any) => ch.id === l.linked_challenge_id) : null
                 return (
                   <tr key={l.id} style={{ borderBottom: '1px solid #1e293b', background: isSel ? '#1e3a2e' : i % 2 === 0 ? 'transparent' : '#ffffff05' }}>
                     <td style={{ padding: '10px 12px', textAlign: 'center' }}>
@@ -571,15 +572,31 @@ export default function LessonsPage() {
                   </div>
 
                   {/* ── Link Challenge ── */}
-                  <div style={{ background: '#0f172a', borderRadius: 12, padding: 14, border: '1px solid #334155' }}>
-                    <label style={{ display: 'block', fontSize: 13, color: '#a78bfa', fontWeight: 700, marginBottom: 8 }}>⚔️ ربط تحدي بالدرس (اختياري)</label>
+                  <div style={{ background: '#0f172a', borderRadius: 12, padding: 14, border: '2px solid #4c1d95' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <label style={{ fontSize: 13, color: '#a78bfa', fontWeight: 700 }}>⚔️ تحدي بعد الدرس</label>
+                      <button
+                        type="button"
+                        onClick={() => setEntryType((entryType as string) === 'challenge' ? 'lesson' : 'challenge' as EntryType)}
+                        style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #4c1d95', background: '#4c1d95', color: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>
+                        {(entryType as string) === 'challenge' ? '← رجوع للدرس' : '+ إنشاء تحدي جديد'}
+                      </button>
+                    </div>
                     <select value={form.linked_challenge_id || ''} onChange={e => setForm((f: any) => ({ ...f, linked_challenge_id: e.target.value }))}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #334155', background: '#1e293b', color: '#fff', fontSize: 14 }}>
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${form.linked_challenge_id ? '#7c3aed' : '#334155'}`, background: '#1e293b', color: '#fff', fontSize: 14, marginBottom: 6 }}>
                       <option value="">بدون تحدي</option>
-                      {challenges.map(c => <option key={c.id} value={c.id}>{c.challenge_type === 'complete_sentence' ? '❓' : '📸'} {c.title_ar}</option>)}
+                      {Array.isArray(challenges) && challenges.map((c: any) => (
+                        <option key={c.id} value={c.id}>⚔️ {c.title_ar}</option>
+                      ))}
                     </select>
-                    {form.linked_challenge_id && (
-                      <div style={{ marginTop: 6, fontSize: 12, color: '#a78bfa' }}>✅ سيظهر زرار "ابدأ التحدي" بعد انتهاء الدرس</div>
+                    {form.linked_challenge_id ? (
+                      <div style={{ fontSize: 12, color: '#a78bfa', padding: '6px 10px', background: '#1e1b4b', borderRadius: 6 }}>
+                        ✅ سيظهر للطالب زرار "ابدأ التحدي" بعد إكمال الدرس مباشرة
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: '#475569' }}>
+                        اختر تحدياً موجوداً أو اضغط "+ إنشاء تحدي جديد" لإنشاء تحدي مرتبط بهذا الدرس
+                      </div>
                     )}
                   </div>
 
