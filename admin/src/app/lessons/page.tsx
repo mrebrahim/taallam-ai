@@ -177,55 +177,90 @@ export default function LessonsPage() {
 
   // ── Save challenge and auto-link to current lesson ──
   const saveChallenge = async () => {
-    if (!challengeForm.title_ar) { setMsg('❌ اكتب عنوان التحدي'); setTimeout(() => setMsg(''), 3000); return }
-    if (!challengeForm.question_ar) { setMsg('❌ اكتب السؤال'); setTimeout(() => setMsg(''), 3000); return }
-    // Only validate options for MCQ challenges
-    if (challengeForm.challenge_type === 'complete_sentence' && 
-        challengeForm.options && 
-        challengeForm.options.some((o: string) => !o.trim())) {
-      setMsg('❌ أكمل كل الخيارات الأربعة'); setTimeout(() => setMsg(''), 3000); return
+    if (!challengeForm.title_ar?.trim()) { 
+      setMsg('❌ اكتب عنوان التحدي'); setTimeout(() => setMsg(''), 3000); return 
+    }
+    if (!challengeForm.question_ar?.trim()) { 
+      setMsg('❌ اكتب السؤال'); setTimeout(() => setMsg(''), 3000); return 
+    }
+    if (challengeForm.challenge_type === 'complete_sentence') {
+      const opts = challengeForm.options || []
+      if (opts.length < 4 || opts.some((o: string) => !o?.trim())) {
+        setMsg('❌ أكمل الخيارات الأربعة'); setTimeout(() => setMsg(''), 3000); return
+      }
     }
     setSaving(true)
-
-    const payload = {
-      ...challengeForm,
-      correct_answer: Number(challengeForm.correct_answer),
-      xp_reward: Number(challengeForm.xp_reward),
-      difficulty: Number(challengeForm.difficulty),
-      sort_order: Number(challengeForm.sort_order),
-      roadmap_id: challengeForm.roadmap_id || form.roadmap_id || null,
-      image_url: challengeForm.image_url || null,
-      is_active: true,
-    }
-
-    const H2 = { ...H, 'Prefer': 'return=representation' }
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/challenges`, {
-      method: 'POST', headers: H2, body: JSON.stringify(payload)
-    })
-
-    if (res.ok || res.status === 201) {
-      const [newChallenge] = await res.json().catch(() => [])
-      if (newChallenge?.id) {
-        // Auto-link challenge to current lesson form
-        setForm((f: any) => ({ ...f, linked_challenge_id: newChallenge.id }))
-        setMsg('✅ تم إنشاء التحدي وربطه بالدرس تلقائياً!')
-      } else {
-        setMsg('✅ تم إضافة التحدي — اختره من القائمة لربطه بالدرس')
+    try {
+      const payload: any = {
+        title_ar: challengeForm.title_ar.trim(),
+        description_ar: challengeForm.description_ar || null,
+        challenge_type: challengeForm.challenge_type || 'complete_sentence',
+        question_ar: challengeForm.question_ar.trim(),
+        options: challengeForm.options || [],
+        correct_answer: Number(challengeForm.correct_answer) || 0,
+        explanation_ar: challengeForm.explanation_ar || null,
+        image_url: challengeForm.image_url || null,
+        xp_reward: Number(challengeForm.xp_reward) || 100,
+        difficulty: Number(challengeForm.difficulty) || 1,
+        sort_order: Number(challengeForm.sort_order) || 0,
+        roadmap_id: challengeForm.roadmap_id || form.roadmap_id || null,
+        is_active: true,
+        use_ai_validation: challengeForm.use_ai_validation || false,
       }
-      // Reset challenge form and go back to lesson
-      setChallengeForm({
-        title_ar: '', description_ar: '', challenge_type: 'complete_sentence',
-        question_ar: '', options: ['', '', '', ''], correct_answer: 0,
-        explanation_ar: '', image_url: '', use_ai_validation: false,
-        xp_reward: 100, difficulty: 1, is_active: true, sort_order: 0, roadmap_id: ''
-      })
-      setEntryType('lesson')
-      load() // Refresh challenges list
-    } else {
-      const errBody = await res.json().catch(() => ({}))
-      const errMsg = errBody?.message || errBody?.details || errBody?.hint || ('HTTP ' + res.status)
-      console.error('Challenge save error:', errBody)
-      setMsg('❌ خطأ في حفظ التحدي: ' + errMsg)
+
+      // Use direct fetch with explicit headers for better control
+      const resp = await fetch(
+        `${SUPABASE_URL}/rest/v1/challenges`,
+        {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation',
+          },
+          body: JSON.stringify(payload),
+        }
+      )
+
+      const respText = await resp.text()
+      console.log('Challenge save response:', resp.status, respText)
+
+      if (resp.ok || resp.status === 201) {
+        let newChallenge: any = null
+        try {
+          const parsed = JSON.parse(respText)
+          newChallenge = Array.isArray(parsed) ? parsed[0] : parsed
+        } catch {}
+
+        if (newChallenge?.id) {
+          setForm((f: any) => ({ ...f, linked_challenge_id: newChallenge.id }))
+          setMsg('✅ تم إنشاء التحدي وربطه بالدرس تلقائياً! الآن احفظ الدرس.')
+        } else {
+          setMsg('✅ تم إضافة التحدي')
+        }
+
+        // Reset challenge form and go back to lesson view
+        setChallengeForm({
+          title_ar: '', description_ar: '', challenge_type: 'complete_sentence',
+          question_ar: '', options: ['', '', '', ''], correct_answer: 0,
+          explanation_ar: '', image_url: '', use_ai_validation: false,
+          xp_reward: 100, difficulty: 1, is_active: true, sort_order: 0, roadmap_id: ''
+        })
+        setEntryType('lesson')
+        load()
+      } else {
+        let errMsg = `HTTP ${resp.status}`
+        try {
+          const errBody = JSON.parse(respText)
+          errMsg = errBody?.message || errBody?.details || errBody?.hint || errMsg
+        } catch {}
+        console.error('Challenge save failed:', resp.status, respText)
+        setMsg('❌ ' + errMsg)
+      }
+    } catch (e: any) {
+      console.error('Challenge save exception:', e)
+      setMsg('❌ ' + (e?.message || 'خطأ غير متوقع'))
     }
     setSaving(false)
     setTimeout(() => setMsg(''), 6000)
