@@ -1,10 +1,10 @@
 workflows:
 
-  # ══════════════════════════════════
-  # Android APK (للتوزيع المباشر)
-  # ══════════════════════════════════
+  # ══════════════════════════════════════════════
+  # Android APK (للتجربة والتوزيع المباشر)
+  # ══════════════════════════════════════════════
   android-apk:
-    name: Android APK (Preview)
+    name: "📱 Android APK (Preview)"
     max_build_duration: 60
     instance_type: mac_mini_m2
 
@@ -12,7 +12,7 @@ workflows:
       node: 20.11.0
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
-        # EXPO_PUBLIC_SUPABASE_ANON_KEY: مضاف من Codemagic secrets
+        EAS_PROJECT_ID: db7b041c-4ebd-463e-8200-0fba79f76f81
 
     scripts:
       - name: Install dependencies
@@ -20,16 +20,19 @@ workflows:
           cd mobile
           npm install
 
-      - name: Build Android APK with Expo
+      - name: Prebuild Android
         script: |
           cd mobile
-          npx expo export --platform android
-          # OR use EAS if configured:
-          # npx eas build --platform android --profile preview --non-interactive
+          npx expo prebuild --platform android --clean
+
+      - name: Build APK
+        script: |
+          cd mobile/android
+          chmod +x gradlew
+          ./gradlew assembleRelease 2>&1
 
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
-      - mobile/build/*.apk
 
     publishing:
       email:
@@ -39,47 +42,66 @@ workflows:
           success: true
           failure: true
 
-  # ══════════════════════════════════
-  # Android Production (Google Play)
-  # ══════════════════════════════════
+  # ══════════════════════════════════════════════
+  # Android AAB — Google Play Store
+  # ══════════════════════════════════════════════
   android-production:
-    name: Android — Google Play
+    name: "🚀 Android AAB — Google Play"
     max_build_duration: 90
     instance_type: mac_mini_m2
 
     environment:
       node: 20.11.0
       android_signing:
-        - taallam_keystore  # اسم الـ keystore في Codemagic
+        - taallam_keystore
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
+        EAS_PROJECT_ID: db7b041c-4ebd-463e-8200-0fba79f76f81
+        PACKAGE_NAME: com.ibrahimschool.taallam
 
     scripts:
       - name: Install dependencies
         script: |
-          cd mobile && npm install
+          cd mobile
+          npm install
 
-      - name: Build Android AAB
+      - name: Prebuild Android
         script: |
           cd mobile
-          npx eas build --platform android --profile production --non-interactive
+          npx expo prebuild --platform android --clean
+
+      - name: Sign & Build AAB
+        script: |
+          cd mobile/android
+          chmod +x gradlew
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH \
+            -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
 
     artifacts:
-      - mobile/**/*.aab
+      - mobile/android/app/build/outputs/**/*.aab
+      - mobile/android/app/build/outputs/**/mapping.txt
 
     publishing:
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal  # internal → alpha → beta → production
+        track: internal
+        in_app_update_priority: 3
       email:
         recipients:
           - ibrahim@n8nar.com
+        notify:
+          success: true
+          failure: true
 
-  # ══════════════════════════════════
-  # iOS Production (App Store)
-  # ══════════════════════════════════
+  # ══════════════════════════════════════════════
+  # iOS — App Store
+  # ══════════════════════════════════════════════
   ios-production:
-    name: iOS — App Store
+    name: "🍎 iOS — App Store"
     max_build_duration: 90
     instance_type: mac_mini_m2
 
@@ -90,19 +112,33 @@ workflows:
         bundle_identifier: com.ibrahimschool.taallam
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
 
     scripts:
       - name: Install dependencies
         script: |
           cd mobile && npm install
 
-      - name: Build iOS IPA
+      - name: Prebuild iOS
         script: |
           cd mobile
-          npx eas build --platform ios --profile production --non-interactive
+          npx expo prebuild --platform ios --clean
+
+      - name: Build iOS IPA
+        script: |
+          cd mobile/ios
+          xcodebuild -workspace TaallamAI.xcworkspace \
+            -scheme TaallamAI \
+            -configuration Release \
+            -archivePath TaallamAI.xcarchive \
+            archive
+          xcodebuild -exportArchive \
+            -archivePath TaallamAI.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath .
 
     artifacts:
-      - mobile/**/*.ipa
+      - mobile/ios/**/*.ipa
 
     publishing:
       app_store_connect:
