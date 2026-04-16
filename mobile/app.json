@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "فاهم",
-    "slug": "fahim",
+    "slug": "faahm",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "fahim",
+    "scheme": "faahm",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
@@ -14,14 +14,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.fahim.app"
+      "bundleIdentifier": "com.faahm.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#58CC02"
       },
-      "package": "com.fahim.app",
+      "package": "com.faahm.app",
       "intentFilters": [
         {
           "action": "VIEW",

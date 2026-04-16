@@ -58,7 +58,7 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
         EAS_PROJECT_ID: db7b041c-4ebd-463e-8200-0fba79f76f81
-        PACKAGE_NAME: com.fahim.app
+        PACKAGE_NAME: com.faahm.app
 
     scripts:
       - name: Install dependencies
@@ -109,7 +109,7 @@ workflows:
       node: 20.11.0
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.fahim.app
+        bundle_identifier: com.faahm.app
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
