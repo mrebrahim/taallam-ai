@@ -9,6 +9,14 @@ const H = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'ap
 const DIFF = ['', 'سهل ⭐', 'متوسط ⭐⭐', 'صعب ⭐⭐⭐', 'خبير ⭐⭐⭐⭐', 'أسطوري 🔥']
 const DIFF_COLORS = ['', '#58CC02', '#1CB0F6', '#FF9600', '#CE82FF', '#FF4B4B']
 
+const CATEGORIES = [
+  { id: 'daily',      label: '⭐ تحدي اليوم',      color: '#f59e0b', bg: '#1c1917' },
+  { id: 'n8n',        label: '⚡ كورس n8n',         color: '#CE82FF', bg: '#2d1a4e' },
+  { id: 'ai_video',   label: '🎬 كورس AI فيديو',   color: '#1CB0F6', bg: '#0c1a2e' },
+  { id: 'vibe_coding',label: '💻 كورس Vibe Coding', color: '#58CC02', bg: '#0a1f0a' },
+  { id: 'general',    label: '📚 عام',              color: '#94a3b8', bg: '#1e293b' },
+]
+
 const EMPTY = {
   title_ar: '', description_ar: '',
   challenge_type: 'complete_sentence',
@@ -28,6 +36,7 @@ const EMPTY = {
   is_active: true,
   sort_order: 0,
   roadmap_id: '',
+  category: 'general',
 }
 
 export default function ChallengesPage() {
@@ -36,6 +45,7 @@ export default function ChallengesPage() {
   const [form, setForm] = useState<any>({ ...EMPTY, options: ['', '', '', ''] })
   const [editing, setEditing] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [filterCat, setFilterCat] = useState('all')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [uploadingImg, setUploadingImg] = useState(false)
@@ -46,7 +56,7 @@ export default function ChallengesPage() {
 
   const load = async () => {
     const [c, r] = await Promise.all([
-      fetch(`${URL2}/rest/v1/challenges?select=*,roadmaps(title_ar,slug)&order=sort_order,created_at.desc`, { headers: H }).then(r => r.json()),
+      fetch(`${URL2}/rest/v1/challenges?select=*,roadmaps(title_ar,slug)&order=category,sort_order,created_at.desc`, { headers: H }).then(r => r.json()),
       fetch(`${URL2}/rest/v1/roadmaps?select=*&order=sort_order`, { headers: H }).then(r => r.json()),
     ])
     setItems(Array.isArray(c) ? c : [])
