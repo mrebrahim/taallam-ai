@@ -79,6 +79,7 @@ export default function LessonScreen() {
   const [videoError, setVideoError]   = useState(false)
   const [linkedChallenge, setLinkedChallenge] = useState<any>(null)
   const [showChallengeBanner, setShowChallengeBanner] = useState(false)
+  const [nextLessonId, setNextLessonId] = useState<string | null>(null)
   const [isBackground, setIsBackground] = useState(false)
   const loadAttempts = useRef(0)
 
@@ -134,6 +135,28 @@ export default function LessonScreen() {
           .single()
         if (ch) setLinkedChallenge(ch)
       }
+      // Find next lesson in same roadmap
+      if (data.roadmap_id) {
+        const { data: nextLesson } = await supabase
+          .from('lessons')
+          .select('id, sort_order, section_id, sections(sort_order)')
+          .eq('roadmap_id', data.roadmap_id)
+          .eq('is_active', true)
+          .order('sort_order')
+        if (nextLesson && nextLesson.length > 0) {
+          // Sort by section.sort_order then lesson.sort_order
+          const sorted = [...nextLesson].sort((a: any, b: any) => {
+            const aSec = a.sections?.sort_order || 0
+            const bSec = b.sections?.sort_order || 0
+            if (aSec !== bSec) return aSec - bSec
+            return (a.sort_order || 0) - (b.sort_order || 0)
+          })
+          const idx = sorted.findIndex((l: any) => l.id === data.id)
+          if (idx !== -1 && idx < sorted.length - 1) {
+            setNextLessonId(sorted[idx + 1].id)
+          }
+        }
+      }
     } catch (e: any) {
       Alert.alert(
         isAr ? 'خطأ' : 'Error',
@@ -172,11 +195,22 @@ export default function LessonScreen() {
         setShowChallengeBanner(true)
         return
       }
-      Alert.alert(
-        isAr ? '🎉 أحسنت!' : '🎉 Well Done!',
-        isAr ? `حصلت على ${lesson.xp_reward || 50} XP 🔥` : `You earned ${lesson.xp_reward || 50} XP 🔥`,
-        [{ text: isAr ? 'رجوع' : 'Back', onPress: () => router.back() }]
-      )
+      if (nextLessonId) {
+        Alert.alert(
+          isAr ? '🎉 أحسنت!' : '🎉 Well Done!',
+          isAr ? `+${lesson.xp_reward || 50} XP 🔥 الدرس التالي جاهز!` : `+${lesson.xp_reward || 50} XP 🔥 Next lesson ready!`,
+          [
+            { text: isAr ? 'رجوع' : 'Back', style: 'cancel', onPress: () => router.back() },
+            { text: isAr ? '⏭ الدرس التالي' : '⏭ Next Lesson', onPress: () => router.replace(('/lesson/' + nextLessonId) as any) },
+          ]
+        )
+      } else {
+        Alert.alert(
+          isAr ? '🏆 أكملت الكورس!' : '🏆 Course Complete!',
+          isAr ? `حصلت على ${lesson.xp_reward || 50} XP 🔥` : `You earned ${lesson.xp_reward || 50} XP 🔥`,
+          [{ text: isAr ? 'رجوع للكورس' : 'Back to course', onPress: () => router.back() }]
+        )
+      }
     } catch (e: any) {
       Alert.alert('Error', e.message)
     } finally {
@@ -349,8 +383,17 @@ export default function LessonScreen() {
             <Text style={s.loginNoteText}>{isAr ? 'سجّل دخولك لمتابعة التقدم' : 'Login to track progress'}</Text>
           </View>
         ) : completed ? (
-          <View style={[s.completeBtn, { backgroundColor: Colors.green, opacity: 0.85 }]}>
-            <Text style={s.completeBtnText}>✅ {isAr ? 'أكملت هذا الدرس' : 'Lesson Completed'}</Text>
+          <View style={{ gap: 10 }}>
+            <View style={[s.completeBtn, { backgroundColor: Colors.green, opacity: 0.85 }]}>
+              <Text style={s.completeBtnText}>✅ {isAr ? 'أكملت هذا الدرس' : 'Lesson Completed'}</Text>
+            </View>
+            {nextLessonId && (
+              <TouchableOpacity
+                style={[s.completeBtn, { backgroundColor: Colors.blue }]}
+                onPress={() => router.replace(('/lesson/' + nextLessonId) as any)}>
+                <Text style={s.completeBtnText}>⏭ {isAr ? 'الدرس التالي' : 'Next Lesson'}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <TouchableOpacity

@@ -10,7 +10,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { Colors, ROADMAP_META } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
 
-// Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true)
 }
@@ -20,11 +19,11 @@ export default function CourseDetailScreen() {
   const { user } = useAuth()
   const { isAr } = useLang()
 
-  const [roadmap, setRoadmap]         = useState<any>(null)
-  const [enrolled, setEnrolled]       = useState(false)
-  const [lessons, setLessons]         = useState<any[]>([])
+  const [roadmap, setRoadmap]           = useState<any>(null)
+  const [enrolled, setEnrolled]         = useState(false)
+  const [sections, setSections]         = useState<any[]>([])   // [{section, lessons[]}]
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
-  const [loading, setLoading]         = useState(true)
+  const [loading, setLoading]           = useState(true)
   const [openSections, setOpenSections] = useState<Set<string>>(new Set())
 
   const meta = slug ? ROADMAP_META[slug as keyof typeof ROADMAP_META] : null
@@ -46,26 +45,36 @@ export default function CourseDetailScreen() {
     setEnrolled(validEnrolled)
 
     if (validEnrolled && rm) {
-      const [{ data: ls }, { data: lp }] = await Promise.all([
-        supabase.from('lessons')
-          .select('*, sections(id, title_ar, sort_order, description_ar)')
-          .eq('roadmap_id', rm.id).eq('is_active', true).order('sort_order'),
-        supabase.from('user_lesson_progress')
-          .select('lesson_id').eq('user_id', user!.id).eq('completed', true),
+      // Fetch sections sorted by sort_order
+      const [{ data: secs }, { data: ls }, { data: lp }] = await Promise.all([
+        supabase.from('sections').select('*').eq('roadmap_id', rm.id).eq('is_active', true).order('sort_order'),
+        supabase.from('lessons').select('*').eq('roadmap_id', rm.id).eq('is_active', true).order('sort_order'),
+        supabase.from('user_lesson_progress').select('lesson_id').eq('user_id', user!.id).eq('completed', true),
       ])
-      const fetchedLessons = ls || []
-      setLessons(fetchedLessons)
-      setCompletedIds(new Set(lp?.map((l: any) => l.lesson_id) || []))
 
-      // Group sections and open the first incomplete one by default
-      const secIds = [...new Set(fetchedLessons.map((l: any) => l.section_id || '__none__'))]
       const completedSet = new Set(lp?.map((l: any) => l.lesson_id) || [])
-      const firstIncomplete = secIds.find(secId => {
-        const secLessons = fetchedLessons.filter((l: any) => (l.section_id || '__none__') === secId)
-        return secLessons.some((l: any) => !completedSet.has(l.id))
-      })
-      if (firstIncomplete) setOpenSections(new Set([firstIncomplete]))
-      else if (secIds.length > 0) setOpenSections(new Set([secIds[0]]))
+      setCompletedIds(completedSet)
+
+      // Build sections with their lessons in order
+      const secList = (secs || []).map((sec: any) => ({
+        ...sec,
+        lessons: (ls || []).filter((l: any) => l.section_id === sec.id).sort((a: any, b: any) => a.sort_order - b.sort_order),
+      })).filter((sec: any) => sec.lessons.length > 0)
+
+      // Also catch lessons with no section
+      const orphans = (ls || []).filter((l: any) => !l.section_id)
+      if (orphans.length > 0) {
+        secList.push({ id: '__none__', title_ar: 'دروس عامة', lessons: orphans })
+      }
+
+      setSections(secList)
+
+      // Open first section that has an incomplete lesson
+      const firstIncomplete = secList.find(sec =>
+        sec.lessons.some((l: any) => !completedSet.has(l.id))
+      )
+      if (firstIncomplete) setOpenSections(new Set([firstIncomplete.id]))
+      else if (secList.length > 0) setOpenSections(new Set([secList[0].id]))
     }
     setLoading(false)
   }
@@ -74,11 +83,13 @@ export default function CourseDetailScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     setOpenSections(prev => {
       const next = new Set(prev)
-      if (next.has(secId)) next.delete(secId)
-      else next.add(secId)
+      next.has(secId) ? next.delete(secId) : next.add(secId)
       return next
     })
   }
+
+  // Build flat ordered list for lock logic
+  const allLessons = sections.flatMap(sec => sec.lessons)
 
   if (loading) return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -92,40 +103,23 @@ export default function CourseDetailScreen() {
         <Text style={{ fontSize: 48, marginBottom: 12 }}>😕</Text>
         <Text style={s.errorText}>{isAr ? 'الكورس غير موجود' : 'Course not found'}</Text>
         <TouchableOpacity style={[s.btn, { backgroundColor: Colors.blue }]} onPress={() => router.back()}>
-          <Text style={s.btnText}>{isAr ? '← رجوع' : '← Back'}</Text>
+          <Text style={s.btnText}>← رجوع</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   )
 
-  const completedCount = lessons.filter(l => completedIds.has(l.id)).length
-  const pct = lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0
-
-  // Group lessons by section, sort by sort_order
-  const sectionsMap: Record<string, any[]> = {}
-  for (const lesson of lessons) {
-    const key = lesson.section_id || '__none__'
-    if (!sectionsMap[key]) sectionsMap[key] = []
-    sectionsMap[key].push(lesson)
-  }
-  const sortedSectionEntries = Object.entries(sectionsMap).sort(([aKey, aLessons], [bKey, bLessons]) => {
-    if (aKey === '__none__') return 1
-    if (bKey === '__none__') return -1
-    const aOrder = (aLessons[0] as any)?.sections?.sort_order || 999
-    const bOrder = (bLessons[0] as any)?.sections?.sort_order || 999
-    return aOrder - bOrder
-  })
+  const totalLessons    = allLessons.length
+  const completedCount  = allLessons.filter(l => completedIds.has(l.id)).length
+  const pct             = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Text style={s.backText}>←</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle} numberOfLines={1}>
-          {meta.emoji} {isAr ? meta.label : roadmap.title_ar}
-        </Text>
+        <Text style={s.headerTitle} numberOfLines={1}>{meta.emoji} {roadmap.title_ar}</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
@@ -133,160 +127,138 @@ export default function CourseDetailScreen() {
         {/* Hero */}
         <View style={[s.hero, { backgroundColor: meta.bg }]}>
           <Text style={s.heroEmoji}>{meta.emoji}</Text>
-          <Text style={[s.heroTitle, { color: meta.color }]}>
-            {isAr ? meta.label : roadmap.title_ar}
-          </Text>
-          {roadmap.description_ar && (
-            <Text style={s.heroDesc}>{roadmap.description_ar}</Text>
-          )}
+          <Text style={[s.heroTitle, { color: meta.color }]}>{roadmap.title_ar}</Text>
+          {roadmap.description_ar && <Text style={s.heroDesc}>{roadmap.description_ar}</Text>}
         </View>
 
         {enrolled ? (
           <>
-            {/* Progress bar */}
+            {/* Progress */}
             <View style={[s.progressCard, { borderColor: meta.color + '30' }]}>
               <View style={s.progressRow}>
-                <Text style={s.progressLabel}>{isAr ? 'تقدمك في الكورس' : 'Your Progress'}</Text>
+                <Text style={s.progressLabel}>تقدمك في الكورس</Text>
                 <Text style={[s.progressPct, { color: meta.color }]}>{pct}%</Text>
               </View>
               <View style={s.progressBg}>
                 <View style={[s.progressFill, { width: `${pct}%` as any, backgroundColor: meta.color }]} />
               </View>
-              <Text style={s.progressSub}>
-                {completedCount} / {lessons.length} {isAr ? 'درس مكتمل' : 'lessons done'}
-              </Text>
+              <Text style={s.progressSub}>{completedCount} / {totalLessons} درس مكتمل</Text>
             </View>
 
-            {lessons.length === 0 ? (
+            {sections.length === 0 ? (
               <View style={s.emptyCard}>
                 <Text style={{ fontSize: 40, marginBottom: 8 }}>🔜</Text>
-                <Text style={s.emptyText}>{isAr ? 'الدروس قادمة قريباً' : 'Lessons coming soon'}</Text>
+                <Text style={s.emptyText}>الدروس قادمة قريباً</Text>
               </View>
             ) : (
-              // ── Sections accordion ──
-              sortedSectionEntries.map(([secId, secLessons], secIdx) => {
-                const secInfo   = secId === '__none__' ? null : (secLessons[0] as any)?.sections
-                const isOpen    = openSections.has(secId)
-                const secDone   = (secLessons as any[]).filter(l => completedIds.has(l.id)).length
-                const secTotal  = (secLessons as any[]).length
-                const secPct    = Math.round((secDone / secTotal) * 100)
-                const allDone   = secDone === secTotal
-
-                // Compute global offset for locked logic
-                const globalOffset = lessons.indexOf(secLessons[0])
+              sections.map((sec, secIdx) => {
+                const isOpen   = openSections.has(sec.id)
+                const secDone  = sec.lessons.filter((l: any) => completedIds.has(l.id)).length
+                const secTotal = sec.lessons.length
+                const secPct   = Math.round((secDone / secTotal) * 100)
+                const allDone  = secDone === secTotal
 
                 return (
-                  <View key={secId} style={[s.sectionWrapper, allDone && { opacity: 0.85 }]}>
-                    {/* Section toggle header */}
+                  <View key={sec.id} style={s.sectionWrapper}>
+
+                    {/* Section header — always tappable */}
                     <TouchableOpacity
                       style={[s.sectionHeader, {
-                        borderColor: meta.color + '40',
+                        borderColor: meta.color + '50',
                         backgroundColor: isOpen ? meta.bg : '#fff',
-                        borderBottomLeftRadius: isOpen ? 0 : 14,
+                        borderBottomLeftRadius:  isOpen ? 0 : 14,
                         borderBottomRightRadius: isOpen ? 0 : 14,
                       }]}
-                      onPress={() => toggleSection(secId)}
-                      activeOpacity={0.8}
+                      onPress={() => toggleSection(sec.id)}
+                      activeOpacity={0.75}
                     >
-                      {/* Right side: number + title */}
+                      {/* Section info */}
                       <View style={{ flex: 1 }}>
-                        {secInfo ? (
-                          <>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
-                              <Text style={[s.sectionTitle, { color: isOpen ? meta.color : Colors.text }]}>
-                                {secInfo.title_ar}
-                              </Text>
-                              <View style={[s.sectionNumBadge, { backgroundColor: meta.bg }]}>
-                                <Text style={[s.sectionNumText, { color: meta.color }]}>{secIdx + 1}</Text>
-                              </View>
-                            </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'flex-end', marginTop: 4 }}>
-                              <Text style={s.sectionMeta}>
-                                {secDone}/{secTotal} {isAr ? 'درس' : 'lessons'}
-                              </Text>
-                              {allDone && <Text style={{ color: Colors.green, fontSize: 12, fontWeight: '700' }}>✓ مكتمل</Text>}
-                            </View>
-                          </>
-                        ) : (
-                          <Text style={[s.sectionTitle, { color: isOpen ? meta.color : Colors.text }]}>
-                            {isAr ? 'دروس عامة' : 'General Lessons'}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+                          <Text style={[s.sectionTitle, { color: isOpen ? meta.color : Colors.text }]} numberOfLines={2}>
+                            {sec.title_ar}
                           </Text>
-                        )}
+                          <View style={[s.secNumBadge, { backgroundColor: meta.bg }]}>
+                            <Text style={[s.secNumTxt, { color: meta.color }]}>{secIdx + 1}</Text>
+                          </View>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                          <Text style={s.sectionMeta}>{secDone}/{secTotal} درس</Text>
+                          {allDone && <Text style={{ color: Colors.green, fontSize: 12, fontWeight: '700' }}>✓ مكتمل</Text>}
+                        </View>
                       </View>
 
-                      {/* Left side: mini progress + chevron */}
-                      <View style={{ alignItems: 'center', gap: 4 }}>
-                        {/* Mini circular progress */}
-                        <View style={[s.miniProgress, { borderColor: allDone ? Colors.green : meta.color + '40' }]}>
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: allDone ? Colors.green : meta.color }}>
+                      {/* Mini progress + chevron */}
+                      <View style={{ alignItems: 'center', gap: 4, marginLeft: 10 }}>
+                        <View style={[s.miniRing, { borderColor: allDone ? Colors.green : meta.color + '50' }]}>
+                          <Text style={{ fontSize: 11, fontWeight: '900', color: allDone ? Colors.green : meta.color }}>
                             {secPct}%
                           </Text>
                         </View>
-                        <Text style={{ fontSize: 14, color: isOpen ? meta.color : Colors.textSub, marginTop: 2 }}>
+                        <Text style={{ fontSize: 13, color: isOpen ? meta.color : '#94a3b8' }}>
                           {isOpen ? '▲' : '▼'}
                         </Text>
                       </View>
                     </TouchableOpacity>
 
-                    {/* Lessons list — only when open */}
+                    {/* Lessons — only when open */}
                     {isOpen && (
                       <View style={[s.sectionBody, { borderColor: meta.color + '30' }]}>
-                        {/* Thin color bar on left */}
-                        <View style={[s.sectionAccentBar, { backgroundColor: meta.color }]} />
+                        <View style={[s.accentBar, { backgroundColor: meta.color }]} />
+                        <View style={{ flex: 1 }}>
+                          {sec.lessons.map((lesson: any, i: number) => {
+                            const globalIdx = allLessons.findIndex((l: any) => l.id === lesson.id)
+                            const done      = completedIds.has(lesson.id)
+                            // Unlock first lesson always; after that unlock if previous is done
+                            const locked    = globalIdx > 0 && !done && !completedIds.has(allLessons[globalIdx - 1]?.id)
 
-                        {(secLessons as any[]).map((lesson, i) => {
-                          const globalIdx = globalOffset + i
-                          const done      = completedIds.has(lesson.id)
-                          const prevDone  = globalIdx === 0 || completedIds.has(lessons[globalIdx - 1]?.id)
-                          const locked    = !done && !prevDone && globalIdx > 0
-
-                          return (
-                            <TouchableOpacity
-                              key={lesson.id}
-                              style={[
-                                s.lessonRow,
-                                done && { backgroundColor: meta.bg },
-                                i < secLessons.length - 1 && s.lessonRowBorder,
-                                locked && { opacity: 0.5 },
-                              ]}
-                              onPress={() => !locked && router.push(('/lesson/' + lesson.id) as any)}
-                              disabled={locked}
-                              activeOpacity={0.75}
-                            >
-                              {/* Status icon */}
-                              <View style={[s.lessonStatusIcon, {
-                                backgroundColor: done ? meta.color : locked ? Colors.border : 'transparent',
-                                borderColor: done ? meta.color : locked ? Colors.border : meta.color + '50',
-                              }]}>
-                                <Text style={{ fontSize: 13, fontWeight: '900', color: done ? '#fff' : locked ? Colors.textMuted : meta.color }}>
-                                  {done ? '✓' : locked ? '🔒' : String(i + 1)}
-                                </Text>
-                              </View>
-
-                              {/* Title + meta */}
-                              <View style={{ flex: 1 }}>
-                                <Text style={[s.lessonTitle, locked && { color: Colors.textMuted }]}>
-                                  {lesson.title_ar}
-                                </Text>
-                                <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end', marginTop: 3 }}>
-                                  <Text style={s.lessonMetaTxt}>
-                                    ⏱️ {Math.floor((lesson.video_duration_seconds || 600) / 60)}{isAr ? 'د' : 'm'}
-                                  </Text>
-                                  <Text style={[s.lessonMetaTxt, { color: done ? Colors.green : meta.color, fontWeight: '800' }]}>
-                                    +{lesson.xp_reward} XP
+                            return (
+                              <TouchableOpacity
+                                key={lesson.id}
+                                style={[
+                                  s.lessonRow,
+                                  done && { backgroundColor: meta.bg },
+                                  i < sec.lessons.length - 1 && s.lessonBorder,
+                                  locked && { opacity: 0.45 },
+                                ]}
+                                onPress={() => !locked && router.push(('/lesson/' + lesson.id) as any)}
+                                disabled={locked}
+                                activeOpacity={0.75}
+                              >
+                                {/* Status circle */}
+                                <View style={[s.lessonIcon, {
+                                  backgroundColor: done ? meta.color : locked ? '#e2e8f0' : 'transparent',
+                                  borderColor: done ? meta.color : locked ? '#cbd5e1' : meta.color + '60',
+                                }]}>
+                                  <Text style={{ fontSize: 13, fontWeight: '900', color: done ? '#fff' : locked ? '#94a3b8' : meta.color }}>
+                                    {done ? '✓' : locked ? '🔒' : String(i + 1)}
                                   </Text>
                                 </View>
-                              </View>
 
-                              {/* Arrow */}
-                              {!locked && (
-                                <Text style={{ fontSize: 16, color: done ? Colors.green : meta.color }}>
-                                  {done ? '✓' : '←'}
-                                </Text>
-                              )}
-                            </TouchableOpacity>
-                          )
-                        })}
+                                {/* Title + meta */}
+                                <View style={{ flex: 1 }}>
+                                  <Text style={[s.lessonTitle, locked && { color: '#94a3b8' }]}>
+                                    {lesson.title_ar}
+                                  </Text>
+                                  <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end', marginTop: 3 }}>
+                                    <Text style={s.lessonMeta}>
+                                      ⏱️ {Math.floor((lesson.video_duration_seconds || 600) / 60)}د
+                                    </Text>
+                                    <Text style={[s.lessonMeta, { color: done ? Colors.green : meta.color, fontWeight: '800' }]}>
+                                      +{lesson.xp_reward} XP
+                                    </Text>
+                                  </View>
+                                </View>
+
+                                {!locked && (
+                                  <Text style={{ fontSize: 16, color: done ? Colors.green : meta.color }}>
+                                    {done ? '✓' : '←'}
+                                  </Text>
+                                )}
+                              </TouchableOpacity>
+                            )
+                          })}
+                        </View>
                       </View>
                     )}
                   </View>
@@ -295,17 +267,15 @@ export default function CourseDetailScreen() {
             )}
           </>
         ) : (
-          // NOT ENROLLED
+          /* NOT ENROLLED */
           <>
             <View style={[s.priceCard, { borderColor: meta.color + '30' }]}>
               <View style={s.priceRow}>
                 <View>
-                  <Text style={s.priceLabel}>{isAr ? 'السعر' : 'Price'}</Text>
+                  <Text style={s.priceLabel}>السعر</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
                     <Text style={[s.price, { color: meta.color }]}>
-                      {roadmap.price_egp > 0
-                        ? `${roadmap.price_egp?.toLocaleString()} ج.م`
-                        : (isAr ? 'مجاني' : 'Free')}
+                      {roadmap.price_egp > 0 ? `${roadmap.price_egp?.toLocaleString()} ج.م` : 'مجاني'}
                     </Text>
                     {roadmap.original_price_egp > roadmap.price_egp && (
                       <Text style={s.originalPrice}>{roadmap.original_price_egp?.toLocaleString()} ج.م</Text>
@@ -314,9 +284,7 @@ export default function CourseDetailScreen() {
                 </View>
                 {roadmap.original_price_egp > roadmap.price_egp && (
                   <View style={[s.discountBadge, { backgroundColor: Colors.red }]}>
-                    <Text style={s.discountText}>
-                      {Math.round((1 - roadmap.price_egp / roadmap.original_price_egp) * 100)}%
-                    </Text>
+                    <Text style={s.discountText}>{Math.round((1 - roadmap.price_egp / roadmap.original_price_egp) * 100)}%</Text>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>خصم</Text>
                   </View>
                 )}
@@ -324,23 +292,17 @@ export default function CourseDetailScreen() {
             </View>
 
             <View style={s.featuresCard}>
-              <Text style={[s.featuresTitle, { color: meta.color }]}>{isAr ? 'ماذا ستحصل؟' : 'What you get'}</Text>
-              {[
-                '✅ وصول كامل لجميع الدروس',
-                '🎬 فيديوهات عالية الجودة',
-                '⚡ اكسب XP وتقدم في المستويات',
-                '📿 تحديات تفاعلية مع كل درس',
-                '🏆 شهادة إتمام الكورس',
-              ].map((f, i) => <Text key={i} style={s.featureItem}>{f}</Text>)}
+              <Text style={[s.featuresTitle, { color: meta.color }]}>ماذا ستحصل؟</Text>
+              {['✅ وصول كامل لجميع الدروس','🎬 فيديوهات عالية الجودة','⚡ اكسب XP وتقدم في المستويات','📿 تحديات تفاعلية مع كل درس','🏆 شهادة إتمام الكورس'].map((f, i) => (
+                <Text key={i} style={s.featureItem}>{f}</Text>
+              ))}
             </View>
 
             <View style={[s.lockedBanner, { borderColor: meta.color + '40', backgroundColor: meta.bg }]}>
               <Text style={{ fontSize: 28 }}>🔒</Text>
-              <Text style={[s.lockedText, { color: meta.color }]}>
-                {isAr ? 'هذا الكورس للمشتركين فقط' : 'Subscribers only'}
-              </Text>
+              <Text style={[s.lockedText, { color: meta.color }]}>هذا الكورس للمشتركين فقط</Text>
             </View>
-            <Text style={s.contactNote}>{isAr ? '📞 للاشتراك تواصل مع الإدارة' : '📞 Contact admin to subscribe'}</Text>
+            <Text style={s.contactNote}>📞 للاشتراك تواصل مع الإدارة</Text>
           </>
         )}
 
@@ -354,19 +316,15 @@ const s = StyleSheet.create({
   container:     { flex: 1, backgroundColor: Colors.bg },
   center:        { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   errorText:     { fontSize: 18, fontWeight: '700', color: Colors.text, marginBottom: 20 },
-
   header:        { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, backgroundColor: '#fff', borderBottomWidth: 2, borderBottomColor: Colors.border },
   backBtn:       { width: 36, height: 36, justifyContent: 'center' },
   backText:      { fontSize: 22, color: Colors.blue, fontWeight: '700' },
   headerTitle:   { flex: 1, fontSize: 17, fontWeight: '900', color: Colors.text },
-
   scroll:        { padding: 16 },
-
   hero:          { borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 16 },
   heroEmoji:     { fontSize: 56, marginBottom: 10 },
   heroTitle:     { fontSize: 22, fontWeight: '900', marginBottom: 8, textAlign: 'center' },
   heroDesc:      { fontSize: 14, color: Colors.textSub, textAlign: 'center', lineHeight: 20 },
-
   progressCard:  { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 2 },
   progressRow:   { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   progressLabel: { fontSize: 14, fontWeight: '700', color: Colors.text },
@@ -374,45 +332,26 @@ const s = StyleSheet.create({
   progressBg:    { height: 10, backgroundColor: Colors.border, borderRadius: 99, overflow: 'hidden', marginBottom: 8 },
   progressFill:  { height: '100%', borderRadius: 99 },
   progressSub:   { fontSize: 12, color: Colors.textSub, textAlign: 'right' },
-
   emptyCard:     { backgroundColor: '#fff', borderRadius: 16, padding: 32, alignItems: 'center', borderWidth: 2, borderColor: Colors.border },
   emptyText:     { fontSize: 15, fontWeight: '700', color: Colors.textSub },
 
-  // ── Accordion ──
-  sectionWrapper: { marginBottom: 10, borderRadius: 14, overflow: 'hidden' },
+  // Sections
+  sectionWrapper: { marginBottom: 10 },
+  sectionHeader:  { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, borderWidth: 2 },
+  secNumBadge:    { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
+  secNumTxt:      { fontSize: 12, fontWeight: '900' },
+  sectionTitle:   { fontSize: 14, fontWeight: '800', textAlign: 'right', flexShrink: 1 },
+  sectionMeta:    { fontSize: 12, color: Colors.textSub },
+  miniRing:       { width: 44, height: 44, borderRadius: 22, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
 
-  sectionHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 14, borderRadius: 14, borderWidth: 2,
-  },
-  sectionNumBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  sectionNumText:  { fontSize: 12, fontWeight: '900' },
-  sectionTitle:    { fontSize: 15, fontWeight: '800', textAlign: 'right' },
-  sectionMeta:     { fontSize: 12, color: Colors.textSub },
+  sectionBody:   { borderWidth: 2, borderTopWidth: 0, borderBottomLeftRadius: 14, borderBottomRightRadius: 14, flexDirection: 'row', overflow: 'hidden', backgroundColor: '#fff' },
+  accentBar:     { width: 4, borderRadius: 2, margin: 6 },
 
-  miniProgress: {
-    width: 42, height: 42, borderRadius: 21,
-    borderWidth: 2, justifyContent: 'center', alignItems: 'center',
-  },
-
-  sectionBody: {
-    backgroundColor: '#fff', borderWidth: 2, borderTopWidth: 0,
-    borderBottomLeftRadius: 14, borderBottomRightRadius: 14,
-    flexDirection: 'row', overflow: 'hidden',
-  },
-  sectionAccentBar: { width: 4, alignSelf: 'stretch', borderRadius: 2, margin: 6 },
-
-  lessonRow: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 13, paddingHorizontal: 12, backgroundColor: '#fff',
-  },
-  lessonRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.border },
-  lessonStatusIcon: {
-    width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, flexShrink: 0,
-  },
-  lessonTitle:  { fontSize: 14, fontWeight: '700', color: Colors.text, textAlign: 'right' },
-  lessonMetaTxt:{ fontSize: 11, color: Colors.textSub },
+  lessonRow:     { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 12 },
+  lessonBorder:  { borderBottomWidth: 1, borderBottomColor: Colors.border },
+  lessonIcon:    { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 2, flexShrink: 0 },
+  lessonTitle:   { fontSize: 14, fontWeight: '700', color: Colors.text, textAlign: 'right' },
+  lessonMeta:    { fontSize: 11, color: Colors.textSub },
 
   // Not enrolled
   priceCard:     { backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 14, borderWidth: 2 },
@@ -422,15 +361,12 @@ const s = StyleSheet.create({
   originalPrice: { fontSize: 16, color: Colors.textSub, textDecorationLine: 'line-through' },
   discountBadge: { borderRadius: 10, padding: 8, alignItems: 'center', minWidth: 48 },
   discountText:  { color: '#fff', fontSize: 18, fontWeight: '900' },
-
   featuresCard:  { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: Colors.border },
   featuresTitle: { fontSize: 16, fontWeight: '900', marginBottom: 12, textAlign: 'right' },
   featureItem:   { fontSize: 14, color: Colors.text, textAlign: 'right', lineHeight: 24 },
-
   lockedBanner:  { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, padding: 16, borderWidth: 2, marginBottom: 10 },
   lockedText:    { fontSize: 15, fontWeight: '800', flex: 1, textAlign: 'right' },
   contactNote:   { fontSize: 13, color: Colors.textSub, textAlign: 'center' },
-
   btn:           { borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12, marginTop: 12 },
   btnText:       { color: '#fff', fontWeight: '800', fontSize: 15 },
 })
