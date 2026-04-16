@@ -6,6 +6,7 @@ import {
 import { useLocalSearchParams, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as DocumentPicker from 'expo-document-picker'
+import { WebView } from 'react-native-webview'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Colors } from '@/constants/Colors'
@@ -21,6 +22,16 @@ function shuffle<T>(arr: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]]
   }
   return a
+}
+
+// Convert YT/Vimeo URL to embed URL
+function toEmbedUrl(url: string): string | null {
+  if (!url) return null
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/)
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&rel=0`
+  const vm = url.match(/vimeo\.com\/(\d+)/)
+  if (vm) return `https://player.vimeo.com/video/${vm[1]}?autoplay=1`
+  return url
 }
 
 export default function ChallengeScreen() {
@@ -58,6 +69,7 @@ export default function ChallengeScreen() {
   // YouTube / Text state
   const [ytUrl, setYtUrl]             = useState('')
   const [textAnswer, setTextAnswer]   = useState('')
+  const [showVideo, setShowVideo]     = useState(false)
 
   useEffect(() => { if (id) load() }, [id])
 
@@ -553,6 +565,40 @@ export default function ChallengeScreen() {
             <Text style={s.explanationTitle}>{isAr ? '💡 الشرح:' : '💡 Explanation:'}</Text>
             <Text style={s.explanationText}>{challenge.explanation_ar}</Text>
             {isCorrect && <Text style={s.xpEarned}>+{challenge.xp_reward} XP 🎉</Text>}
+          </View>
+        )}
+
+        {/* Explanation Video — shown after answer OR for review types */}
+        {challenge.explanation_video_url && (answered || orderChecked || matchChecked) && (
+          <View style={s.videoCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <Text style={{ fontSize: 18 }}>🎬</Text>
+              <Text style={s.videoCardTitle}>{isAr ? 'فيديو شرح التحدي' : 'Challenge Explanation Video'}</Text>
+              <View style={{ flex: 1 }} />
+              <View style={[s.videoBadge, { backgroundColor: '#0c1a2e' }]}>
+                <Text style={{ color: '#1CB0F6', fontSize: 11, fontWeight: '700' }}>اختياري</Text>
+              </View>
+            </View>
+            {!showVideo ? (
+              <TouchableOpacity style={s.videoThumb} onPress={() => setShowVideo(true)}>
+                <View style={s.playBtn}>
+                  <Text style={{ fontSize: 32 }}>▶</Text>
+                </View>
+                <Text style={s.videoThumbTxt}>{isAr ? 'اضغط لمشاهدة شرح المدرب' : 'Tap to watch instructor explanation'}</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={s.webviewWrap}>
+                <WebView
+                  source={{ uri: toEmbedUrl(challenge.explanation_video_url) || challenge.explanation_video_url }}
+                  style={{ flex: 1 }}
+                  allowsFullscreenVideo
+                  mediaPlaybackRequiresUserAction={false}
+                />
+                <TouchableOpacity style={s.closeVideoBtn} onPress={() => setShowVideo(false)}>
+                  <Text style={{ color: '#94a3b8', fontSize: 13 }}>✕ إغلاق الفيديو</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         )}
 

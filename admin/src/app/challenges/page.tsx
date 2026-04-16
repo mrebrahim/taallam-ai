@@ -19,7 +19,14 @@ const CATEGORIES = [
 
 const EMPTY = {
   title_ar: '', description_ar: '',
-  challenge_type: 'complete_sentence',
+  challenge_type: 'mcq',
+  blank_sentence: '',
+  items: [] as any[],
+  pairs: [] as any[],
+  correct_order: [] as any[],
+  answer_text: '',
+  task_instructions_ar: '',
+  explanation_video_url: '',
   question_ar: '',
   options: ['', '', '', ''],
   correct_answer: 0,
@@ -201,6 +208,12 @@ export default function ChallengesPage() {
                 </span>
                 {c.use_ai_validation && <span style={{ background: '#4c1d9525', color: '#a78bfa', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>🤖 Gemini AI</span>}
                 {c.image_url && <span style={{ background: '#1e3a5f', color: '#60a5fa', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>📸 صورة</span>}
+                {c.explanation_video_url && <span style={{ background: '#0c1a2e', color: '#1CB0F6', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>🎬 فيديو شرح</span>}
+                {(() => {
+                  const typeLabels: Record<string,string> = { mcq:'❓ MCQ', complete_sentence:'✏️ أكمل', true_false:'⚖️ صح/غلط', ordering:'🔢 ترتيب', matching:'🔗 وصّل', node_analysis:'📸 صورة', video_submission:'🎥 فيديو', text_submission:'✍️ مفتوح' }
+                  const lbl = typeLabels[c.challenge_type]
+                  return lbl ? <span style={{ background: '#2d1a4e', color: '#CE82FF', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>{lbl}</span> : null
+                })()}
                 {c.roadmaps && <span style={{ background: (COLORS[c.roadmaps.slug] || '#58CC02') + '25', color: COLORS[c.roadmaps.slug] || '#58CC02', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>{c.roadmaps.title_ar}</span>}
               </div>
               <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 6, textAlign: 'right' }}>{c.question_ar}</div>
@@ -253,34 +266,137 @@ export default function ChallengesPage() {
                 </div>
               </div>
 
+              {/* Challenge Type */}
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 10, fontWeight: 600 }}>🎯 نوع التحدي *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+                  {[
+                    ['mcq',              '❓', 'اختر الإجابة',   'MCQ 4 خيارات'],
+                    ['complete_sentence','✏️', 'أكمل الجملة',    'فراغ + 4 خيارات'],
+                    ['true_false',       '⚖️', 'صح أو غلط',      '2 خيارات فقط'],
+                    ['ordering',         '🔢', 'رتب الخطوات',    'سحب وترتيب'],
+                    ['matching',         '🔗', 'وصّل بين',       'أزواج متطابقة'],
+                    ['node_analysis',    '📸', 'رفع صورة',       'مراجعة بشرية'],
+                    ['video_submission', '🎥', 'فيديو يوتيوب',   'مراجعة بشرية'],
+                    ['text_submission',  '✍️', 'إجابة مفتوحة',  'Prompt / Mission'],
+                  ].map(([type, icon, label, desc]) => (
+                    <button key={type} type="button"
+                      onClick={() => setForm({ ...form, challenge_type: type })}
+                      style={{ padding: '10px 8px', borderRadius: 10, border: `2px solid ${form.challenge_type === type ? '#CE82FF' : '#334155'}`, background: form.challenge_type === type ? '#2d1a4e' : '#0f172a', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}>
+                      <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: form.challenge_type === type ? '#CE82FF' : '#94a3b8' }}>{label}</div>
+                      <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>{desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Question */}
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>السؤال *</label>
+                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>
+                  {['node_analysis','video_submission','text_submission'].includes(form.challenge_type) ? 'تعليمات المهمة *' : 'السؤال *'}
+                </label>
                 <textarea value={form.question_ar} onChange={e => setForm({ ...form, question_ar: e.target.value })}
                   rows={2} placeholder="أكمل الجملة: node الـ HTTP Request بيستخدم لـ ___"
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: 14, boxSizing: 'border-box', resize: 'vertical' }} />
               </div>
 
-              {/* Options */}
-              <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 8, fontWeight: 600 }}>الخيارات الأربعة * (اضغط على الخيار الصحيح)</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {form.options.map((opt: string, i: number) => (
-                    <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <button type="button" onClick={() => setForm({ ...form, correct_answer: i })}
-                        style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${form.correct_answer === i ? '#58CC02' : '#334155'}`, background: form.correct_answer === i ? '#58CC02' : 'transparent', color: form.correct_answer === i ? '#fff' : '#64748b', cursor: 'pointer', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
-                        {['أ', 'ب', 'ج', 'د'][i]}
+              {/* Dynamic fields by challenge type */}
+
+              {/* MCQ / Complete Sentence — blank sentence field */}
+              {form.challenge_type === 'complete_sentence' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>✏️ الجملة الناقصة (ضع ___ للفراغ)</label>
+                  <input value={form.blank_sentence || ''} onChange={e => setForm({ ...form, blank_sentence: e.target.value })}
+                    placeholder="مثال: الـ ___ يُستخدم لنقل البيانات بين الأنظمة"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #CE82FF', background: '#0f172a', color: '#fff', fontSize: 14, boxSizing: 'border-box' }} />
+                </div>
+              )}
+
+              {/* MCQ / Complete Sentence — 4 options */}
+              {['mcq', 'complete_sentence'].includes(form.challenge_type) && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 8, fontWeight: 600 }}>الخيارات الأربعة * (اضغط على الخيار الصحيح)</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {(form.options || ['','','','']).map((opt: string, i: number) => (
+                      <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <button type="button" onClick={() => setForm({ ...form, correct_answer: i })}
+                          style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${form.correct_answer === i ? '#58CC02' : '#334155'}`, background: form.correct_answer === i ? '#58CC02' : 'transparent', color: form.correct_answer === i ? '#fff' : '#64748b', cursor: 'pointer', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
+                          {['أ','ب','ج','د'][i]}
+                        </button>
+                        <input value={opt} onChange={e => { const opts = [...(form.options||['','','',''])]; opts[i] = e.target.value; setForm({ ...form, options: opts }) }}
+                          placeholder={`الخيار ${['الأول','الثاني','الثالث','الرابع'][i]}`}
+                          style={{ flex: 1, padding: '10px 12px', borderRadius: 8, border: `1px solid ${form.correct_answer === i ? '#58CC02' : '#334155'}`, background: form.correct_answer === i ? '#1e3a2e' : '#0f172a', color: '#fff', fontSize: 14 }} />
+                        {form.correct_answer === i && <span style={{ color: '#58CC02', fontSize: 18 }}>✓</span>}
+                      </div>
+                    ))}
+                    <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>💡 اضغط على الحرف أمام الخيار لتحديده كإجابة صحيحة</div>
+                  </div>
+                </div>
+              )}
+
+              {/* True / False */}
+              {form.challenge_type === 'true_false' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 8, fontWeight: 600 }}>⚖️ الإجابة الصحيحة</label>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    {[['1','✅ صح','#166534','#bbf7d0'],['0','❌ غلط','#7f1d1d','#fca5a5']].map(([val,label,bg,color]) => (
+                      <button key={val} type="button" onClick={() => setForm({ ...form, correct_answer: Number(val) })}
+                        style={{ flex: 1, padding: '16px', borderRadius: 12, border: `3px solid ${form.correct_answer === Number(val) ? color : '#334155'}`, background: form.correct_answer === Number(val) ? bg : 'transparent', color: form.correct_answer === Number(val) ? color : '#64748b', cursor: 'pointer', fontWeight: 800, fontSize: 16 }}>
+                        {label}
                       </button>
-                      <input value={opt}
-                        onChange={e => { const opts = [...form.options]; opts[i] = e.target.value; setForm({ ...form, options: opts }) }}
-                        placeholder={`الخيار ${['الأول', 'الثاني', 'الثالث', 'الرابع'][i]}`}
-                        style={{ flex: 1, padding: '10px 12px', borderRadius: 8, border: `1px solid ${form.correct_answer === i ? '#58CC02' : '#334155'}`, background: form.correct_answer === i ? '#1e3a2e' : '#0f172a', color: '#fff', fontSize: 14 }} />
-                      {form.correct_answer === i && <span style={{ color: '#58CC02', fontSize: 18 }}>✓</span>}
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Ordering */}
+              {form.challenge_type === 'ordering' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 8, fontWeight: 600 }}>🔢 عناصر الترتيب (الترتيب الصحيح = الترتيب المدخل)</label>
+                  {(form.items || ['','']).map((item: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                      <span style={{ width: 28, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CE82FF', fontWeight: 800 }}>{i+1}</span>
+                      <input value={typeof item === 'object' ? item.text : item}
+                        onChange={e => { const items = [...(form.items||[])]; items[i] = {id: String(i), text: e.target.value}; setForm({ ...form, items, correct_order: items.map((_: any,idx: number) => idx) }) }}
+                        placeholder={`الخطوة ${i+1}`}
+                        style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: 13 }} />
+                      {(form.items||[]).length > 2 && (
+                        <button type="button" onClick={() => { const items = (form.items||[]).filter((_: any,idx: number) => idx !== i); setForm({...form, items, correct_order: items.map((_: any,idx: number) => idx)}) }}
+                          style={{ padding: '0 10px', borderRadius: 8, border: '1px solid #7f1d1d', background: 'transparent', color: '#f87171', cursor: 'pointer', fontSize: 16 }}>✕</button>
+                      )}
                     </div>
                   ))}
-                  <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>💡 اضغط على الحرف أمام الخيار لتحديده كإجابة صحيحة</div>
+                  <button type="button" onClick={() => setForm({...form, items: [...(form.items||[]), {id: String((form.items||[]).length), text: ''}]})}
+                    style={{ padding: '6px 14px', borderRadius: 8, border: '1px dashed #334155', background: 'transparent', color: '#64748b', cursor: 'pointer', fontSize: 12, marginTop: 4 }}>
+                    + إضافة خطوة
+                  </button>
                 </div>
-              </div>
+              )}
+
+              {/* Matching */}
+              {form.challenge_type === 'matching' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 8, fontWeight: 600 }}>🔗 أزواج التطابق (يسار ↔ يمين)</label>
+                  {(form.pairs || [{left:'',right:''}]).map((pair: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+                      <input value={pair.left} onChange={e => { const p = [...(form.pairs||[])]; p[i] = {...p[i], left: e.target.value}; setForm({...form, pairs: p}) }}
+                        placeholder="العنصر" style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: 13 }} />
+                      <span style={{ color: '#475569', fontWeight: 700 }}>↔</span>
+                      <input value={pair.right} onChange={e => { const p = [...(form.pairs||[])]; p[i] = {...p[i], right: e.target.value}; setForm({...form, pairs: p}) }}
+                        placeholder="الوظيفة" style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: 13 }} />
+                      {(form.pairs||[]).length > 2 && (
+                        <button type="button" onClick={() => { const p = (form.pairs||[]).filter((_: any,idx: number) => idx !== i); setForm({...form, pairs: p}) }}
+                          style={{ padding: '0 10px', borderRadius: 8, border: '1px solid #7f1d1d', background: 'transparent', color: '#f87171', cursor: 'pointer', fontSize: 16 }}>✕</button>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setForm({...form, pairs: [...(form.pairs||[]), {left:'',right:''}]})}
+                    style={{ padding: '6px 14px', borderRadius: 8, border: '1px dashed #334155', background: 'transparent', color: '#64748b', cursor: 'pointer', fontSize: 12, marginTop: 4 }}>
+                    + إضافة زوج
+                  </button>
+                </div>
+              )}
 
               {/* Explanation */}
               <div>
@@ -288,6 +404,24 @@ export default function ChallengesPage() {
                 <textarea value={form.explanation_ar || ''} onChange={e => setForm({ ...form, explanation_ar: e.target.value })}
                   rows={2} placeholder="اشرح لماذا هذه الإجابة صحيحة..."
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: '#fff', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }} />
+              </div>
+
+              {/* Explanation Video URL (optional) */}
+              <div style={{ background: '#0f172a', borderRadius: 12, padding: 16, border: `1px solid ${form.explanation_video_url ? '#1CB0F6' : '#334155'}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 18 }}>🎬</span>
+                  <span style={{ fontWeight: 700, color: form.explanation_video_url ? '#1CB0F6' : '#94a3b8', fontSize: 14 }}>فيديو شرح التحدي</span>
+                  <span style={{ background: '#1e3a5f', color: '#60a5fa', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>اختياري</span>
+                </div>
+                <input value={form.explanation_video_url || ''}
+                  onChange={e => setForm({ ...form, explanation_video_url: e.target.value })}
+                  placeholder="https://youtube.com/watch?v=... أو رابط Vimeo"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${form.explanation_video_url ? '#1CB0F6' : '#334155'}`, background: '#1e293b', color: '#fff', fontSize: 13, boxSizing: 'border-box' }} />
+                {form.explanation_video_url && (
+                  <div style={{ fontSize: 12, color: '#1CB0F6', marginTop: 6 }}>
+                    ✅ سيظهر للطالب بعد الإجابة على التحدي
+                  </div>
+                )}
               </div>
 
               {/* Image Upload */}
