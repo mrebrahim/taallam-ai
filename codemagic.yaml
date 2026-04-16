@@ -53,7 +53,7 @@ workflows:
     environment:
       node: 20.11.0
       android_signing:
-        - taallam_keystore
+        - faahm_keystore
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
