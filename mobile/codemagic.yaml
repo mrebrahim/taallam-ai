@@ -58,7 +58,7 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
         EAS_PROJECT_ID: db7b041c-4ebd-463e-8200-0fba79f76f81
-        PACKAGE_NAME: com.ibrahimschool.taallam
+        PACKAGE_NAME: com.fahim.app
 
     scripts:
       - name: Install dependencies
@@ -109,7 +109,7 @@ workflows:
       node: 20.11.0
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.ibrahimschool.taallam
+        bundle_identifier: com.fahim.app
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
@@ -127,13 +127,13 @@ workflows:
       - name: Build iOS IPA
         script: |
           cd mobile/ios
-          xcodebuild -workspace TaallamAI.xcworkspace \
-            -scheme TaallamAI \
+          xcodebuild -workspace Fahim.xcworkspace \
+            -scheme Fahim \
             -configuration Release \
-            -archivePath TaallamAI.xcarchive \
+            -archivePath Fahim.xcarchive \
             archive
           xcodebuild -exportArchive \
-            -archivePath TaallamAI.xcarchive \
+            -archivePath Fahim.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
             -exportPath .
 

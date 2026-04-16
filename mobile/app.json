@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Taallam AI",
-    "slug": "taallam-ai",
+    "name": "فاهم",
+    "slug": "fahim",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "taallam",
+    "scheme": "fahim",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
@@ -14,21 +14,21 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.ibrahimschool.taallam"
+      "bundleIdentifier": "com.fahim.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#58CC02"
       },
-      "package": "com.ibrahimschool.taallam",
+      "package": "com.fahim.app",
       "intentFilters": [
         {
           "action": "VIEW",
           "autoVerify": true,
           "data": [
             {
-              "scheme": "taallam",
+              "scheme": "fahim",
               "host": "auth",
               "pathPrefix": "/callback"
             }
@@ -38,7 +38,8 @@
             "DEFAULT"
           ]
         }
-      ]
+      ],
+      "versionCode": 1
     },
     "plugins": [
       "expo-router",
