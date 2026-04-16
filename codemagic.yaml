@@ -86,13 +86,9 @@ workflows:
       - mobile/android/app/build/outputs/**/mapping.txt
 
     publishing:
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal
-        in_app_update_priority: 3
       email:
         recipients:
-          - ibrahim@n8nar.com
+          - ebrahimkhlil01@gmail.com
         notify:
           success: true
           failure: true
