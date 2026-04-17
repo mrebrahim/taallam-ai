@@ -71,6 +71,20 @@ workflows:
           cd mobile
           npx expo prebuild --platform android --clean
 
+      - name: Auto increment versionCode
+        script: |
+          cd mobile
+          # Read current versionCode from app.json and increment it
+          CURRENT=$(node -e "const a=require('./app.json').expo.android; console.log(a.versionCode||1)")
+          NEW=$((CURRENT + 1))
+          node -e "
+            const fs=require('fs');
+            const d=JSON.parse(fs.readFileSync('app.json','utf8'));
+            d.expo.android.versionCode=$NEW;
+            fs.writeFileSync('app.json',JSON.stringify(d,null,2));
+            console.log('versionCode: $CURRENT → $NEW');
+          "
+
       - name: Patch targetSdkVersion to 35
         script: |
           # Patch build.gradle to force targetSdkVersion 35
