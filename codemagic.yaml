@@ -71,6 +71,15 @@ workflows:
           cd mobile
           npx expo prebuild --platform android --clean
 
+      - name: Patch targetSdkVersion to 35
+        script: |
+          # Patch build.gradle to force targetSdkVersion 35
+          find mobile/android -name "build.gradle" | xargs grep -l "targetSdkVersion" | while read f; do
+            sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 35/g' "$f"
+            sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 35/g' "$f"
+            echo "Patched: $f"
+          done
+
       - name: Sign & Build AAB
         script: |
           cd mobile/android
