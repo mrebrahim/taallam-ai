@@ -51,13 +51,7 @@
     },
     "plugins": [
       "expo-router",
-      "expo-document-picker",
-      [
-        "expo-av",
-        {
-          "requestRecordingPermission": false
-        }
-      ]
+      "expo-document-picker"
     ],
     "experiments": {
       "typedRoutes": true
