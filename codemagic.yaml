@@ -35,7 +35,7 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
         PACKAGE_NAME: com.faahm.app
-        VERSION_CODE: "5"
+        VERSION_CODE: "6"
     scripts:
       - name: Install
         script: cd mobile && npm install
@@ -43,15 +43,16 @@ workflows:
       - name: Set versionCode
         script: |
           cd mobile
-          node -e "var fs=require('fs'),d=JSON.parse(fs.readFileSync('app.json'));d.expo.android.versionCode=parseInt('$VERSION_CODE');fs.writeFileSync('app.json',JSON.stringify(d,null,2));console.log('✅ versionCode='+parseInt('$VERSION_CODE'))"
+          node -e "var fs=require('fs'),d=JSON.parse(fs.readFileSync('app.json'));d.expo.android.versionCode=parseInt('$VERSION_CODE');fs.writeFileSync('app.json',JSON.stringify(d,null,2));console.log('versionCode='+parseInt('$VERSION_CODE'))"
 
       - name: Prebuild Android
         script: cd mobile && npx expo prebuild --platform android --clean
 
-      - name: Verify targetSdkVersion
+      - name: Fix targetSdkVersion in gradle.properties
         script: |
-          echo "=== Checking targetSdkVersion ==="
-          grep -r "targetSdkVersion\|targetSdk" mobile/android/app/build.gradle || true
+          printf "\nandroid.targetSdkVersion=35\nandroid.compileSdkVersion=35\nandroid.minSdkVersion=24\n" >> mobile/android/gradle.properties
+          echo "=== Verification ==="
+          grep "targetSdkVersion\|compileSdkVersion" mobile/android/gradle.properties
 
       - name: Build AAB
         script: |
