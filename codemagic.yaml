@@ -15,8 +15,7 @@ workflows:
       - name: Prebuild
         script: cd mobile && npx expo prebuild --platform android --clean
       - name: Build APK
-        script: |
-          cd mobile/android && chmod +x gradlew && ./gradlew assembleRelease
+        script: cd mobile/android && chmod +x gradlew && ./gradlew assembleRelease
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
     publishing:
@@ -36,28 +35,35 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
         PACKAGE_NAME: com.faahm.app
-        # ↓↓↓ زود الرقم ده بـ +1 قبل كل build ↓↓↓
-        VERSION_CODE: "10"
     scripts:
       - name: Install
         script: cd mobile && npm install
 
-      - name: Prebuild
+      - name: Set versionCode in app.json BEFORE prebuild
+        script: |
+          cd mobile
+          echo "VERSION_CODE from env = $VERSION_CODE"
+          node -e "
+            var fs = require('fs');
+            var d = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            var vc = parseInt(process.env.VERSION_CODE) || 10;
+            d.expo.android.versionCode = vc;
+            fs.writeFileSync('app.json', JSON.stringify(d, null, 2));
+            console.log('✅ versionCode set to ' + vc);
+          "
+
+      - name: Prebuild Android
         script: cd mobile && npx expo prebuild --platform android --clean
 
-      - name: Set versionCode + targetSdk
+      - name: Force targetSdkVersion 35
         script: |
-          echo "Setting versionCode to $VERSION_CODE"
-          # Set versionCode in gradle files
           find mobile/android -name "*.gradle" -o -name "*.gradle.kts" | while read f; do
-            sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/g" "$f"
-            sed -i "s/versionCode = [0-9]*/versionCode = $VERSION_CODE/g" "$f"
             sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 35/g' "$f"
             sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 35/g' "$f"
             sed -i 's/targetSdk = [0-9]*/targetSdk = 35/g' "$f"
             sed -i 's/compileSdk = [0-9]*/compileSdk = 35/g' "$f"
+            echo "✅ Patched $f"
           done
-          echo "✅ versionCode=$VERSION_CODE, targetSdk=35"
 
       - name: Build AAB
         script: |
