@@ -39,7 +39,7 @@
           ]
         }
       ],
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.VIBRATE",
@@ -53,6 +53,7 @@
       "minSdkVersion": 24
     },
     "plugins": [
+      "./plugins/withAndroidSdk35",
       "expo-router",
       "expo-document-picker"
     ],

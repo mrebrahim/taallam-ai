@@ -35,18 +35,23 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
         PACKAGE_NAME: com.faahm.app
-        VERSION_CODE: "4"
+        VERSION_CODE: "5"
     scripts:
       - name: Install
         script: cd mobile && npm install
 
-      - name: Set versionCode in app.json
+      - name: Set versionCode
         script: |
           cd mobile
-          node -e "var fs=require('fs'),d=JSON.parse(fs.readFileSync('app.json'));d.expo.android.versionCode=parseInt('$VERSION_CODE');fs.writeFileSync('app.json',JSON.stringify(d,null,2));console.log('versionCode='+parseInt('$VERSION_CODE'))"
+          node -e "var fs=require('fs'),d=JSON.parse(fs.readFileSync('app.json'));d.expo.android.versionCode=parseInt('$VERSION_CODE');fs.writeFileSync('app.json',JSON.stringify(d,null,2));console.log('✅ versionCode='+parseInt('$VERSION_CODE'))"
 
       - name: Prebuild Android
         script: cd mobile && npx expo prebuild --platform android --clean
+
+      - name: Verify targetSdkVersion
+        script: |
+          echo "=== Checking targetSdkVersion ==="
+          grep -r "targetSdkVersion\|targetSdk" mobile/android/app/build.gradle || true
 
       - name: Build AAB
         script: |
