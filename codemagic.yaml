@@ -12,6 +12,7 @@ workflows:
       node: 20.11.0
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
         EAS_PROJECT_ID: db7b041c-4ebd-463e-8200-0fba79f76f81
 
     scripts:
@@ -37,7 +38,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - ibrahim@n8nar.com
+          - ebrahimkhlil01@gmail.com
         notify:
           success: true
           failure: true
@@ -71,30 +72,24 @@ workflows:
           cd mobile
           npx expo prebuild --platform android --clean
 
-      - name: Auto increment versionCode
+      - name: Set versionCode automatically
         script: |
           cd mobile
-          # Read current versionCode from app.json and increment it
-          CURRENT=$(node -e "const a=require('./app.json').expo.android; console.log(a.versionCode||1)")
-          NEW=$((CURRENT + 1))
-          node -e "
-            const fs=require('fs');
-            const d=JSON.parse(fs.readFileSync('app.json','utf8'));
-            d.expo.android.versionCode=$NEW;
-            fs.writeFileSync('app.json',JSON.stringify(d,null,2));
-            console.log('versionCode: $CURRENT → $NEW');
-          "
+          VC=$(( $(git rev-list --count HEAD) + 10 ))
+          echo "Setting versionCode to $VC"
+          node -e "var fs=require('fs'),d=JSON.parse(fs.readFileSync('app.json'));d.expo.android.versionCode=${VC};fs.writeFileSync('app.json',JSON.stringify(d,null,2));console.log('versionCode =',d.expo.android.versionCode)"
 
-      - name: Patch targetSdkVersion to 35
+      - name: Force targetSdkVersion 35
         script: |
-          # Patch build.gradle to force targetSdkVersion 35
-          find mobile/android -name "build.gradle" | xargs grep -l "targetSdkVersion" | while read f; do
+          find mobile/android -name "*.gradle" -o -name "*.gradle.kts" 2>/dev/null | while read f; do
             sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 35/g' "$f"
             sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 35/g' "$f"
+            sed -i 's/targetSdk = [0-9]*/targetSdk = 35/g' "$f"
+            sed -i 's/compileSdk = [0-9]*/compileSdk = 35/g' "$f"
             echo "Patched: $f"
           done
 
-      - name: Sign & Build AAB
+      - name: Sign and Build AAB
         script: |
           cd mobile/android
           chmod +x gradlew
@@ -106,7 +101,6 @@ workflows:
 
     artifacts:
       - mobile/android/app/build/outputs/**/*.aab
-      - mobile/android/app/build/outputs/**/mapping.txt
 
     publishing:
       email:
@@ -160,11 +154,9 @@ workflows:
       - mobile/ios/**/*.ipa
 
     publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true
       email:
         recipients:
-          - ibrahim@n8nar.com
+          - ebrahimkhlil01@gmail.com
+        notify:
+          success: true
+          failure: true
