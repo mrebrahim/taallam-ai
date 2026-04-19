@@ -35,7 +35,7 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
         PACKAGE_NAME: com.faahm.app
-        VERSION_CODE: "6"
+        VERSION_CODE: "8"
     scripts:
       - name: Install
         script: cd mobile && npm install
@@ -48,9 +48,12 @@ workflows:
       - name: Prebuild Android
         script: cd mobile && npx expo prebuild --platform android --clean
 
-      - name: Fix targetSdkVersion in gradle.properties
+      - name: Set targetSdkVersion 35 ONLY (keep compileSdk 34)
         script: |
-          printf "\nandroid.targetSdkVersion=35\nandroid.compileSdkVersion=35\nandroid.minSdkVersion=24\n" >> mobile/android/gradle.properties
+          # IMPORTANT: Only change targetSdkVersion, NOT compileSdkVersion
+          # compileSdkVersion 35 breaks Kotlin 1.9.23 used by expo-modules-core
+          # targetSdkVersion 35 is what Google Play requires
+          printf "\nandroid.targetSdkVersion=35\n" >> mobile/android/gradle.properties
           echo "=== Verification ==="
           grep "targetSdkVersion\|compileSdkVersion" mobile/android/gradle.properties
 
