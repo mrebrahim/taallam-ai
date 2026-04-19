@@ -1,8 +1,5 @@
 workflows:
 
-  # ══════════════════════════════════════════════
-  # Android APK (للتجربة والتوزيع المباشر)
-  # ══════════════════════════════════════════════
   android-apk:
     name: "📱 Android APK (Preview)"
     max_build_duration: 60
@@ -13,24 +10,19 @@ workflows:
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
-        EAS_PROJECT_ID: db7b041c-4ebd-463e-8200-0fba79f76f81
 
     scripts:
       - name: Install dependencies
-        script: |
-          cd mobile
-          npm install
+        script: cd mobile && npm install
 
       - name: Prebuild Android
-        script: |
-          cd mobile
-          npx expo prebuild --platform android --clean
+        script: cd mobile && npx expo prebuild --platform android --clean
 
       - name: Build APK
         script: |
           cd mobile/android
           chmod +x gradlew
-          ./gradlew assembleRelease 2>&1
+          ./gradlew assembleRelease
 
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
@@ -43,9 +35,6 @@ workflows:
           success: true
           failure: true
 
-  # ══════════════════════════════════════════════
-  # Android AAB — Google Play Store
-  # ══════════════════════════════════════════════
   android-production:
     name: "🚀 Android AAB — Google Play"
     max_build_duration: 90
@@ -58,35 +47,32 @@ workflows:
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
-        EAS_PROJECT_ID: db7b041c-4ebd-463e-8200-0fba79f76f81
         PACKAGE_NAME: com.faahm.app
 
     scripts:
       - name: Install dependencies
-        script: |
-          cd mobile
-          npm install
+        script: cd mobile && npm install
 
       - name: Prebuild Android
-        script: |
-          cd mobile
-          npx expo prebuild --platform android --clean
+        script: cd mobile && npx expo prebuild --platform android --clean
 
-      - name: Set versionCode automatically
+      - name: Fix targetSdkVersion + versionCode
         script: |
-          cd mobile
-          VC=$(( $(git rev-list --count HEAD) + 10 ))
-          echo "Setting versionCode to $VC"
-          node -e "var fs=require('fs'),d=JSON.parse(fs.readFileSync('app.json'));d.expo.android.versionCode=${VC};fs.writeFileSync('app.json',JSON.stringify(d,null,2));console.log('versionCode =',d.expo.android.versionCode)"
-
-      - name: Force targetSdkVersion 35
-        script: |
-          find mobile/android -name "*.gradle" -o -name "*.gradle.kts" 2>/dev/null | while read f; do
+          # Fix targetSdkVersion to 35 in all gradle files
+          find mobile/android -name "*.gradle" -o -name "*.gradle.kts" | while read f; do
             sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 35/g' "$f"
             sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 35/g' "$f"
             sed -i 's/targetSdk = [0-9]*/targetSdk = 35/g' "$f"
             sed -i 's/compileSdk = [0-9]*/compileSdk = 35/g' "$f"
             echo "Patched: $f"
+          done
+          # Use BUILD_NUMBER from Codemagic as versionCode (always unique)
+          echo "BUILD_NUMBER = $BUILD_NUMBER"
+          VC=$((BUILD_NUMBER + 100))
+          echo "versionCode will be: $VC"
+          find mobile/android -name "*.gradle" -o -name "*.gradle.kts" | while read f; do
+            sed -i "s/versionCode [0-9]*/versionCode $VC/g" "$f"
+            echo "versionCode set in: $f"
           done
 
       - name: Sign and Build AAB
@@ -101,57 +87,6 @@ workflows:
 
     artifacts:
       - mobile/android/app/build/outputs/**/*.aab
-
-    publishing:
-      email:
-        recipients:
-          - ebrahimkhlil01@gmail.com
-        notify:
-          success: true
-          failure: true
-
-  # ══════════════════════════════════════════════
-  # iOS — App Store
-  # ══════════════════════════════════════════════
-  ios-production:
-    name: "🍎 iOS — App Store"
-    max_build_duration: 90
-    instance_type: mac_mini_m2
-
-    environment:
-      node: 20.11.0
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.faahm.app
-      vars:
-        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
-
-    scripts:
-      - name: Install dependencies
-        script: |
-          cd mobile && npm install
-
-      - name: Prebuild iOS
-        script: |
-          cd mobile
-          npx expo prebuild --platform ios --clean
-
-      - name: Build iOS IPA
-        script: |
-          cd mobile/ios
-          xcodebuild -workspace Fahim.xcworkspace \
-            -scheme Fahim \
-            -configuration Release \
-            -archivePath Fahim.xcarchive \
-            archive
-          xcodebuild -exportArchive \
-            -archivePath Fahim.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath .
-
-    artifacts:
-      - mobile/ios/**/*.ipa
 
     publishing:
       email:
