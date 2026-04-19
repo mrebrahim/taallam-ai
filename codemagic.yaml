@@ -4,42 +4,30 @@ workflows:
     name: "📱 Android APK (Preview)"
     max_build_duration: 60
     instance_type: mac_mini_m2
-
     environment:
       node: 20.11.0
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
-
     scripts:
-      - name: Install dependencies
+      - name: Install
         script: cd mobile && npm install
-
-      - name: Prebuild Android
+      - name: Prebuild
         script: cd mobile && npx expo prebuild --platform android --clean
-
       - name: Build APK
         script: |
-          cd mobile/android
-          chmod +x gradlew
-          ./gradlew assembleRelease
-
+          cd mobile/android && chmod +x gradlew && ./gradlew assembleRelease
     artifacts:
       - mobile/android/app/build/outputs/**/*.apk
-
     publishing:
       email:
-        recipients:
-          - ebrahimkhlil01@gmail.com
-        notify:
-          success: true
-          failure: true
+        recipients: [ebrahimkhlil01@gmail.com]
+        notify: {success: true, failure: true}
 
   android-production:
     name: "🚀 Android AAB — Google Play"
     max_build_duration: 90
     instance_type: mac_mini_m2
-
     environment:
       node: 20.11.0
       android_signing:
@@ -48,34 +36,30 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
         PACKAGE_NAME: com.faahm.app
-
+        # ↓↓↓ زود الرقم ده بـ +1 قبل كل build ↓↓↓
+        VERSION_CODE: "10"
     scripts:
-      - name: Install dependencies
+      - name: Install
         script: cd mobile && npm install
 
-      - name: Prebuild Android
+      - name: Prebuild
         script: cd mobile && npx expo prebuild --platform android --clean
 
-      - name: Fix targetSdkVersion + versionCode
+      - name: Set versionCode + targetSdk
         script: |
-          # Fix targetSdkVersion to 35 in all gradle files
+          echo "Setting versionCode to $VERSION_CODE"
+          # Set versionCode in gradle files
           find mobile/android -name "*.gradle" -o -name "*.gradle.kts" | while read f; do
+            sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/g" "$f"
+            sed -i "s/versionCode = [0-9]*/versionCode = $VERSION_CODE/g" "$f"
             sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 35/g' "$f"
             sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 35/g' "$f"
             sed -i 's/targetSdk = [0-9]*/targetSdk = 35/g' "$f"
             sed -i 's/compileSdk = [0-9]*/compileSdk = 35/g' "$f"
-            echo "Patched: $f"
           done
-          # Use BUILD_NUMBER from Codemagic as versionCode (always unique)
-          echo "BUILD_NUMBER = $BUILD_NUMBER"
-          VC=$((BUILD_NUMBER + 100))
-          echo "versionCode will be: $VC"
-          find mobile/android -name "*.gradle" -o -name "*.gradle.kts" | while read f; do
-            sed -i "s/versionCode [0-9]*/versionCode $VC/g" "$f"
-            echo "versionCode set in: $f"
-          done
+          echo "✅ versionCode=$VERSION_CODE, targetSdk=35"
 
-      - name: Sign and Build AAB
+      - name: Build AAB
         script: |
           cd mobile/android
           chmod +x gradlew
@@ -87,11 +71,7 @@ workflows:
 
     artifacts:
       - mobile/android/app/build/outputs/**/*.aab
-
     publishing:
       email:
-        recipients:
-          - ebrahimkhlil01@gmail.com
-        notify:
-          success: true
-          failure: true
+        recipients: [ebrahimkhlil01@gmail.com]
+        notify: {success: true, failure: true}
