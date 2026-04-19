@@ -35,35 +35,18 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
         PACKAGE_NAME: com.faahm.app
+        VERSION_CODE: "4"
     scripts:
       - name: Install
         script: cd mobile && npm install
 
-      - name: Set versionCode in app.json BEFORE prebuild
+      - name: Set versionCode in app.json
         script: |
           cd mobile
-          echo "VERSION_CODE from env = $VERSION_CODE"
-          node -e "
-            var fs = require('fs');
-            var d = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-            var vc = parseInt(process.env.VERSION_CODE) || 10;
-            d.expo.android.versionCode = vc;
-            fs.writeFileSync('app.json', JSON.stringify(d, null, 2));
-            console.log('✅ versionCode set to ' + vc);
-          "
+          node -e "var fs=require('fs'),d=JSON.parse(fs.readFileSync('app.json'));d.expo.android.versionCode=parseInt('$VERSION_CODE');fs.writeFileSync('app.json',JSON.stringify(d,null,2));console.log('versionCode='+parseInt('$VERSION_CODE'))"
 
       - name: Prebuild Android
         script: cd mobile && npx expo prebuild --platform android --clean
-
-      - name: Force targetSdkVersion 35
-        script: |
-          find mobile/android -name "*.gradle" -o -name "*.gradle.kts" | while read f; do
-            sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 35/g' "$f"
-            sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 35/g' "$f"
-            sed -i 's/targetSdk = [0-9]*/targetSdk = 35/g' "$f"
-            sed -i 's/compileSdk = [0-9]*/compileSdk = 35/g' "$f"
-            echo "✅ Patched $f"
-          done
 
       - name: Build AAB
         script: |

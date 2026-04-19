@@ -39,7 +39,7 @@
           ]
         }
       ],
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.VIBRATE",
