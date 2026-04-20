@@ -35,7 +35,7 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
         PACKAGE_NAME: com.faahm.app
-        VERSION_CODE: "8"
+        VERSION_CODE: "9"
     scripts:
       - name: Install
         script: cd mobile && npm install
@@ -54,6 +54,8 @@ workflows:
           printf "\nandroid.targetSdkVersion=35\n" >> mobile/android/gradle.properties
           # Enable 16KB memory page size support (required by Google Play)
           printf "\nandroid.enableSupportFor16KBPageSizes=true\n" >> mobile/android/gradle.properties
+          # Additional 16KB page alignment support
+          printf "\nandroid.experimental.cacheCompileLib=false\n" >> mobile/android/gradle.properties
           echo "=== Verification ==="
           grep "targetSdkVersion\|16KB\|PageSize" mobile/android/gradle.properties
 
