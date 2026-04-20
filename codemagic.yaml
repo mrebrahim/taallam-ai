@@ -48,14 +48,14 @@ workflows:
       - name: Prebuild Android
         script: cd mobile && npx expo prebuild --platform android --clean
 
-      - name: Set targetSdkVersion 35 ONLY (keep compileSdk 34)
+      - name: Set targetSdkVersion 35 + 16KB page size support
         script: |
-          # IMPORTANT: Only change targetSdkVersion, NOT compileSdkVersion
-          # compileSdkVersion 35 breaks Kotlin 1.9.23 used by expo-modules-core
-          # targetSdkVersion 35 is what Google Play requires
+          # Only change targetSdkVersion (not compileSdkVersion — breaks Kotlin 1.9.23)
           printf "\nandroid.targetSdkVersion=35\n" >> mobile/android/gradle.properties
+          # Enable 16KB memory page size support (required by Google Play)
+          printf "\nandroid.enableSupportFor16KBPageSizes=true\n" >> mobile/android/gradle.properties
           echo "=== Verification ==="
-          grep "targetSdkVersion\|compileSdkVersion" mobile/android/gradle.properties
+          grep "targetSdkVersion\|16KB\|PageSize" mobile/android/gradle.properties
 
       - name: Build AAB
         script: |
