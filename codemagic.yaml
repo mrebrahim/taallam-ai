@@ -35,7 +35,7 @@ workflows:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
         PACKAGE_NAME: com.faahm.app
-        VERSION_CODE: "10"
+        VERSION_CODE: "11"
     scripts:
       - name: Install
         script: cd mobile && npm install
