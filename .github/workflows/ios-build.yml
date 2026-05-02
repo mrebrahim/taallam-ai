@@ -1,0 +1,138 @@
+name: 🍎 iOS IPA — App Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'Build Number (must be higher than last upload)'
+        required: true
+        default: '1'
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd mobile
+          npm install
+
+      - name: Set buildNumber
+        run: |
+          cd mobile
+          node -e "
+            var fs = require('fs');
+            var d = JSON.parse(fs.readFileSync('app.json'));
+            if (!d.expo.ios) d.expo.ios = {};
+            d.expo.ios.buildNumber = '${{ github.event.inputs.build_number }}';
+            fs.writeFileSync('app.json', JSON.stringify(d, null, 2));
+            console.log('✅ buildNumber = ' + d.expo.ios.buildNumber);
+          "
+
+      - name: Prebuild iOS
+        run: |
+          cd mobile
+          npx expo prebuild --platform ios --clean
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Install CocoaPods
+        run: |
+          cd mobile/ios
+          pod install
+
+      - name: Import Apple Certificate
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # Create a temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > /tmp/certificate.p12
+          security import /tmp/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          echo "✅ Certificate imported"
+
+      - name: Import Provisioning Profile
+        env:
+          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          echo "$APPLE_PROVISIONING_PROFILE_BASE64" | base64 --decode > $PP_PATH
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          echo "✅ Provisioning profile installed"
+
+      - name: Build IPA
+        run: |
+          cd mobile/ios
+          xcodebuild \
+            -workspace faahm.xcworkspace \
+            -scheme faahm \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/faahm.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            | xcpretty
+
+      - name: Export IPA
+        run: |
+          cat > /tmp/ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.faahm.app</key>
+              <string>${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath $RUNNER_TEMP/faahm.xcarchive \
+            -exportOptionsPlist /tmp/ExportOptions.plist \
+            -exportPath $RUNNER_TEMP/ipa \
+            | xcpretty
+
+          echo "✅ IPA exported"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: faahm-release-b${{ github.event.inputs.build_number }}.ipa
+          path: ${{ runner.temp }}/ipa/*.ipa
+          retention-days: 7
