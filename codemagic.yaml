@@ -88,3 +88,76 @@ workflows:
       email:
         recipients: [ebrahimkhlil01@gmail.com]
         notify: {success: true, failure: true}
+
+  ios-production:
+    name: "🍎 iOS — App Store"
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.faahm.app
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
+
+    scripts:
+      - name: Install
+        script: cd mobile && npm install
+
+      - name: Set build number
+        script: |
+          cd mobile
+          BUILD_NUMBER=$(date +%Y%m%d%H%M)
+          node -e "
+            var fs=require('fs'),d=JSON.parse(fs.readFileSync('app.json'));
+            if(!d.expo.ios) d.expo.ios={};
+            d.expo.ios.buildNumber='$BUILD_NUMBER';
+            fs.writeFileSync('app.json',JSON.stringify(d,null,2));
+            console.log('✅ buildNumber=$BUILD_NUMBER');
+          "
+
+      - name: Prebuild iOS
+        script: cd mobile && npx expo prebuild --platform ios --clean
+
+      - name: Install CocoaPods
+        script: cd mobile/ios && pod install
+
+      - name: Set up code signing
+        script: xcode-project use-profiles
+
+      - name: Build IPA
+        script: |
+          WORKSPACE=$(find mobile/ios -name "*.xcworkspace" -maxdepth 1 | head -1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          echo "✅ Workspace: $WORKSPACE  Scheme: $SCHEME"
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -archivePath "$CM_BUILD_DIR/$SCHEME.xcarchive" \
+            -destination "generic/platform=iOS" \
+            clean archive \
+            CODE_SIGN_STYLE=Manual
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$CM_BUILD_DIR/$SCHEME.xcarchive" \
+            -exportOptionsPlist /tmp/export_options.plist \
+            -exportPath "$CM_BUILD_DIR/ipa"
+
+    artifacts:
+      - $CM_BUILD_DIR/ipa/*.ipa
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+      email:
+        recipients: [ebrahimkhlil01@gmail.com]
+        notify: {success: true, failure: true}
