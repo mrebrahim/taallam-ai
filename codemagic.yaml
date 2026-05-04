@@ -98,6 +98,8 @@ workflows:
       node: 20.11.0
       xcode: latest
       cocoapods: default
+      integrations:
+        app_store_connect: App Store Connect
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.faahm.app
