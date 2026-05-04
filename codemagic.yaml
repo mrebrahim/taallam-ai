@@ -98,12 +98,12 @@ workflows:
       node: 20.11.0
       xcode: latest
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.faahm.app
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
+        APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
+        APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
         BUNDLE_ID: com.faahm.app
 
     scripts:
@@ -127,6 +127,24 @@ workflows:
 
       - name: Install CocoaPods
         script: cd mobile/ios && pod install
+
+      - name: Set up keychain
+        script: keychain initialize
+
+      - name: Fetch or create signing files
+        script: |
+          mkdir -p ~/.private_keys
+          printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" \
+            | sed 's/\\n/\n/g' \
+            > ~/.private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --create
+
+      - name: Add certificates to keychain
+        script: keychain add-certificates
 
       - name: Set up code signing
         script: xcode-project use-profiles
