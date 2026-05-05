@@ -138,8 +138,12 @@ workflows:
           printf '%s' '<?xml version="1.0" encoding="UTF-8"?>' > ExportOptions.plist
           printf '%s' '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> ExportOptions.plist
           printf '%s' '<plist version="1.0"><dict>' >> ExportOptions.plist
-          printf '%s' '<key>method</key><string>app-store</string>' >> ExportOptions.plist
+          printf '%s' '<key>method</key><string>app-store-connect</string>' >> ExportOptions.plist
           printf '%s' '<key>teamID</key><string>RH8HBHDA3T</string>' >> ExportOptions.plist
+          printf '%s' '<key>provisioningProfiles</key><dict>' >> ExportOptions.plist
+          printf '%s' '<key>com.faahm.app</key><string>faahm_appstore</string>' >> ExportOptions.plist
+          printf '%s' '</dict>' >> ExportOptions.plist
+          printf '%s' '<key>signingStyle</key><string>manual</string>' >> ExportOptions.plist
           printf '%s' '<key>uploadBitcode</key><false/>' >> ExportOptions.plist
           printf '%s' '<key>compileBitcode</key><false/>' >> ExportOptions.plist
           printf '%s' '<key>uploadSymbols</key><true/>' >> ExportOptions.plist
