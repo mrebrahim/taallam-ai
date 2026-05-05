@@ -113,8 +113,25 @@ workflows:
       vars:
         EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
+        APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
+        APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
 
     scripts:
+      - name: Fix App Store Connect Private Key format
+        script: |
+          # تحويل الـ private key من نص عادي لـ PEM صحيح
+          echo "$APP_STORE_CONNECT_PRIVATE_KEY" | sed 's/\\n/\n/g' > /tmp/asc_key.p8
+          # التحقق من أن الملف صحيح
+          if ! grep -q "BEGIN" /tmp/asc_key.p8; then
+            echo "-----BEGIN PRIVATE KEY-----" > /tmp/asc_key_fixed.p8
+            echo "$APP_STORE_CONNECT_PRIVATE_KEY" | tr ' ' '\n' | grep -v "BEGIN\|END\|PRIVATE\|KEY\|^$" >> /tmp/asc_key_fixed.p8
+            echo "-----END PRIVATE KEY-----" >> /tmp/asc_key_fixed.p8
+            mv /tmp/asc_key_fixed.p8 /tmp/asc_key.p8
+          fi
+          export APP_STORE_CONNECT_PRIVATE_KEY=$(cat /tmp/asc_key.p8)
+          echo "✅ Private key formatted successfully"
+
       - name: Install dependencies
         script: |
           cd mobile && npm install
