@@ -99,12 +99,12 @@ workflows:
 
     environment:
       node: 20.11.0
+      groups:
+        - apple
+        - supabase
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.faahm.app
-      vars:
-        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
-        EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
 
     scripts:
       - name: Install dependencies
