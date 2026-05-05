@@ -128,6 +128,7 @@ workflows:
             -archivePath "$SCHEME.xcarchive" \
             -destination "generic/platform=iOS" \
             CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=RH8HBHDA3T \
             PROVISIONING_PROFILE_SPECIFIER="faahm_appstore" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
