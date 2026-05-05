@@ -116,11 +116,12 @@ workflows:
       - name: Build iOS IPA
         script: |
           cd mobile/ios
-          # Find workspace name dynamically
+          # Find workspace name dynamically after prebuild
           WORKSPACE=$(find . -name "*.xcworkspace" -maxdepth 1 | head -1)
           SCHEME=$(basename "$WORKSPACE" .xcworkspace)
           echo "Using workspace: $WORKSPACE, scheme: $SCHEME"
 
+          # Build archive
           xcodebuild -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
             -configuration Release \
@@ -132,25 +133,18 @@ workflows:
             archive
 
           # Create ExportOptions.plist
-          cat > ExportOptions.plist << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>app-store</string>
-    <key>teamID</key>
-    <string>RH8HBHDA3T</string>
-    <key>uploadBitcode</key>
-    <false/>
-    <key>compileBitcode</key>
-    <false/>
-    <key>uploadSymbols</key>
-    <true/>
-</dict>
-</plist>
-EOF
+          printf '%s' '<?xml version="1.0" encoding="UTF-8"?>' > ExportOptions.plist
+          printf '%s' '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> ExportOptions.plist
+          printf '%s' '<plist version="1.0"><dict>' >> ExportOptions.plist
+          printf '%s' '<key>method</key><string>app-store</string>' >> ExportOptions.plist
+          printf '%s' '<key>teamID</key><string>RH8HBHDA3T</string>' >> ExportOptions.plist
+          printf '%s' '<key>uploadBitcode</key><false/>' >> ExportOptions.plist
+          printf '%s' '<key>compileBitcode</key><false/>' >> ExportOptions.plist
+          printf '%s' '<key>uploadSymbols</key><true/>' >> ExportOptions.plist
+          printf '%s' '</dict></plist>' >> ExportOptions.plist
+          echo "ExportOptions.plist created"
 
+          # Export IPA
           xcodebuild -exportArchive \
             -archivePath "$SCHEME.xcarchive" \
             -exportOptionsPlist ExportOptions.plist \
