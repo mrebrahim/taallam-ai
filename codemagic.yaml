@@ -116,13 +116,43 @@ workflows:
       - name: Build iOS IPA
         script: |
           cd mobile/ios
-          xcodebuild -workspace Fahim.xcworkspace \
-            -scheme Fahim \
+          # Find workspace name dynamically
+          WORKSPACE=$(find . -name "*.xcworkspace" -maxdepth 1 | head -1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          echo "Using workspace: $WORKSPACE, scheme: $SCHEME"
+
+          xcodebuild -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
             -configuration Release \
-            -archivePath Fahim.xcarchive \
+            -archivePath "$SCHEME.xcarchive" \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="faahm_appstore" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
+
+          # Create ExportOptions.plist
+          cat > ExportOptions.plist << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+    <key>teamID</key>
+    <string>RH8HBHDA3T</string>
+    <key>uploadBitcode</key>
+    <false/>
+    <key>compileBitcode</key>
+    <false/>
+    <key>uploadSymbols</key>
+    <true/>
+</dict>
+</plist>
+EOF
+
           xcodebuild -exportArchive \
-            -archivePath Fahim.xcarchive \
+            -archivePath "$SCHEME.xcarchive" \
             -exportOptionsPlist ExportOptions.plist \
             -exportPath .
 
