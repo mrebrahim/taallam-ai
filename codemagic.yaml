@@ -105,8 +105,6 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.faahm.app
-        certificate_name: faahm_distribution
-        provisioning_profile_name: faahm_appstore
 
     scripts:
       - name: Install dependencies
