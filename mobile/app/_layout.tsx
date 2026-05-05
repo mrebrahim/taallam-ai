@@ -58,6 +58,7 @@ function AppNavigator() {
       <Stack.Screen name="sadaqat/index" />
       <Stack.Screen name="sadaqat/[id]" />
       <Stack.Screen name="store" options={{ headerShown: false }} />
+      <Stack.Screen name="store" options={{ headerShown: false }} />
     </Stack>
   )
 }
