@@ -57,6 +57,7 @@ function AppNavigator() {
         <Stack.Screen name="lesson/[id]" options={{ presentation: 'card', animation: 'slide_from_right' }} />
       <Stack.Screen name="sadaqat/index" />
       <Stack.Screen name="sadaqat/[id]" />
+      <Stack.Screen name="store" options={{ headerShown: false }} />
     </Stack>
   )
 }

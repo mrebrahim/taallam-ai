@@ -79,6 +79,7 @@ export default function HomeScreen() {
       { data: pr },
       { data: dc },
       { data: freezes },
+      { data: prods },
     ] = await Promise.all([
       supabase.from('roadmaps').select('*').eq('is_active', true).order('sort_order'),
       supabase.from('course_enrollments').select('roadmap_id').eq('user_id', user!.id).eq('is_active', true),
@@ -365,11 +366,13 @@ export default function HomeScreen() {
         {products.length > 0 && (
           <View style={s.section}>
             <View style={s.sectionHeader}>
-              <Text style={s.seeAll}></Text>
+              <TouchableOpacity onPress={() => router.push('/store')}>
+                <Text style={s.seeAll}>{isAr ? 'عرض المزيد' : 'See all'}</Text>
+              </TouchableOpacity>
               <Text style={s.sectionTitle}>{isAr ? '🛍️ منتجات رقمية' : '🛍️ Digital Products'}</Text>
             </View>
-            {products.map((p: any) => (
-              <View key={p.id} style={s.productCard}>
+            {products.slice(0, 3).map((p: any) => (
+              <TouchableOpacity key={p.id} style={s.productCard} onPress={() => router.push('/store')}>
                 {p.image_url ? (
                   <Image source={{ uri: p.image_url }} style={s.productImg} />
                 ) : (
@@ -383,16 +386,22 @@ export default function HomeScreen() {
                     <Text style={s.productDesc} numberOfLines={2}>{isAr ? p.description_ar : (p.description_en || p.description_ar)}</Text>
                   ) : null}
                   <View style={s.variantsRow}>
-                    {(p.variants || []).filter((v: any) => v.is_active).sort((a: any, b: any) => a.sort_order - b.sort_order).map((v: any) => (
-                      <TouchableOpacity key={v.id} style={s.variantBtn}>
+                    {(p.variants || []).filter((v: any) => v.is_active).slice(0,2).map((v: any) => (
+                      <View key={v.id} style={s.variantBtn}>
                         <Text style={s.variantPrice}>{v.price} {v.currency}</Text>
                         <Text style={s.variantLabel}>{isAr ? v.label_ar : (v.label_en || v.label_ar)}</Text>
-                      </TouchableOpacity>
+                      </View>
                     ))}
                   </View>
                 </View>
-              </View>
+                <Text style={{ fontSize: 18, color: '#cbd5e1' }}>←</Text>
+              </TouchableOpacity>
             ))}
+            {products.length > 3 && (
+              <TouchableOpacity style={s.seeAllBtn} onPress={() => router.push('/store')}>
+                <Text style={s.seeAllBtnTxt}>{isAr ? `عرض كل المنتجات (${products.length})` : `View all products (${products.length})`}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -471,6 +480,8 @@ const s = StyleSheet.create({
   priceBadge:     { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   priceTxt:       { fontSize: 11, fontWeight: '800' },
   arrow:          { fontSize: 16, color: '#ddd' },
+  seeAllBtn:      { backgroundColor: '#f0fdf4', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#86efac', marginTop: 4 },
+  seeAllBtnTxt:   { fontSize: 14, fontWeight: '800', color: '#166534' },
   productCard:    { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 2, borderColor: '#e2e8f0', flexDirection: 'row', gap: 12 },
   productImg:     { width: 80, height: 80, borderRadius: 14, backgroundColor: '#f8fafc' },
   productName:    { fontSize: 15, fontWeight: '800', color: '#0f172a', textAlign: 'right', marginBottom: 4 },
