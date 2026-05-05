@@ -2,8 +2,11 @@
 import { useEffect, useState } from 'react'
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const H = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+// Use service role for writes, anon for reads
+const H_READ = { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
+const H = { 'apikey': SERVICE_KEY || ANON_KEY, 'Authorization': `Bearer ${SERVICE_KEY || ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
 
 type Variant = { id?: string; label_ar: string; label_en: string; price: string; currency: string; period: string; is_active: boolean; sort_order: number }
 type Product = { id?: string; name_ar: string; name_en: string; description_ar: string; description_en: string; image_url: string; is_active: boolean; sort_order: number; variants?: Variant[] }
