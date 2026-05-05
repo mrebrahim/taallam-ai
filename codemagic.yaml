@@ -88,3 +88,53 @@ workflows:
       email:
         recipients: [ebrahimkhlil01@gmail.com]
         notify: {success: true, failure: true}
+
+  # ══════════════════════════════════════════════
+  # iOS — App Store
+  # ══════════════════════════════════════════════
+  ios-production:
+    name: "🍎 iOS — App Store"
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.faahm.app
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
+
+    scripts:
+      - name: Install dependencies
+        script: cd mobile && npm install
+
+      - name: Prebuild iOS
+        script: cd mobile && npx expo prebuild --platform ios --clean
+
+      - name: Build iOS IPA
+        script: |
+          cd mobile/ios
+          xcodebuild -workspace Fahim.xcworkspace \
+            -scheme Fahim \
+            -configuration Release \
+            -archivePath Fahim.xcarchive \
+            archive
+          xcodebuild -exportArchive \
+            -archivePath Fahim.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath .
+
+    artifacts:
+      - mobile/ios/**/*.ipa
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+      email:
+        recipients: [ebrahimkhlil01@gmail.com]
+        notify: {success: true, failure: true}
