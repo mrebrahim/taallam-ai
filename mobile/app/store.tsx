@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
+import { openWhatsApp, loadWASettings } from '@/lib/whatsapp'
 import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
 
@@ -15,6 +16,7 @@ export default function StoreScreen() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    loadWASettings()
     supabase
       .from('digital_products')
       .select('*, variants:product_variants(*)')
@@ -58,13 +60,20 @@ export default function StoreScreen() {
                   {activeVariants.length > 0 && (
                     <View style={s.variantsWrap}>
                       {activeVariants.map((v: any) => (
-                        <TouchableOpacity key={v.id} style={s.variantBtn} activeOpacity={0.8}>
+                        <View key={v.id} style={s.variantBtn}>
                           <Text style={s.variantLabel}>{isAr ? v.label_ar : (v.label_en || v.label_ar)}</Text>
                           <Text style={s.variantPrice}>{v.price} {v.currency}</Text>
-                        </TouchableOpacity>
+                        </View>
                       ))}
                     </View>
                   )}
+                  <TouchableOpacity
+                    style={s.waBtn}
+                    activeOpacity={0.85}
+                    onPress={() => openWhatsApp(isAr ? p.name_ar : (p.name_en || p.name_ar))}
+                  >
+                    <Text style={s.waBtnTxt}>💬 {isAr ? 'تواصل واتساب' : 'WhatsApp'}</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             )
@@ -95,4 +104,6 @@ const s = StyleSheet.create({
   variantBtn:     { backgroundColor: '#f0fdf4', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', borderWidth: 1.5, borderColor: Colors.green },
   variantLabel:   { fontSize: 12, color: Colors.green, fontWeight: '700', marginBottom: 2 },
   variantPrice:   { fontSize: 16, fontWeight: '900', color: '#166534' },
+  waBtn:          { backgroundColor: '#25D366', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 12, flexDirection: 'row', justifyContent: 'center', gap: 8 },
+  waBtnTxt:       { fontSize: 15, fontWeight: '800', color: '#fff' },
 })

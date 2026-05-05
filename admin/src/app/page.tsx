@@ -32,6 +32,7 @@ export default function Dashboard() {
     { href:'/users',       icon:'👥', label:'المستخدمين', desc:'عرض بيانات كل المستخدمين', color:'#FF9600' },
     { href:'/roadmaps',    icon:'🗺️', label:'المسارات',   desc:'إدارة مسارات التعلم', color:'#FF4B4B' },
     { href:'/products',    icon:'🛍️', label:'المنتجات الرقمية', desc:'أضف وعدّل المنتجات والأسعار', color:'#58CC02' },
+    { href:'/settings',    icon:'⚙️', label:'الإعدادات',   desc:'واتساب، روابط، وإعدادات التطبيق', color:'#25D366' },
   ]
 
   const STATS = [

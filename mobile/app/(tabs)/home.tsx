@@ -6,6 +6,7 @@ import {
 import { router } from 'expo-router'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { openWhatsApp, loadWASettings } from '@/lib/whatsapp'
 import { Colors, ROADMAP_META } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -72,6 +73,7 @@ export default function HomeScreen() {
   }, [user])
 
   const loadData = async () => {
+    loadWASettings()
     const today = new Date().toISOString().split('T')[0]
     const [
       { data: rm },
@@ -356,6 +358,15 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                 )}
+                {!isEnrolled && (
+                  <TouchableOpacity
+                    style={s.waIconBtn}
+                    onPress={e => { e.stopPropagation?.(); openWhatsApp(isAr ? meta.label : slug) }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={{ fontSize: 18 }}>💬</Text>
+                  </TouchableOpacity>
+                )}
                 <Text style={s.arrow}>←</Text>
               </TouchableOpacity>
             )
@@ -482,6 +493,7 @@ const s = StyleSheet.create({
   arrow:          { fontSize: 16, color: '#ddd' },
   seeAllBtn:      { backgroundColor: '#f0fdf4', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: Colors.green, marginTop: 4 },
   seeAllBtnTxt:   { fontSize: 14, fontWeight: '800', color: Colors.green },
+  waIconBtn:      { backgroundColor: '#dcfce7', borderRadius: 10, padding: 8, justifyContent: 'center', alignItems: 'center' },
   productCard:    { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 2, borderColor: '#e2e8f0', flexDirection: 'row', gap: 12 },
   productImg:     { width: 80, height: 80, borderRadius: 14, backgroundColor: '#f8fafc' },
   productName:    { fontSize: 15, fontWeight: '800', color: '#0f172a', textAlign: 'right', marginBottom: 4 },
