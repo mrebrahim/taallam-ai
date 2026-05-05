@@ -1,0 +1,151 @@
+workflows:
+
+  # ══════════════════════════════════════════════
+  # Android APK (للتجربة والتوزيع المباشر)
+  # ══════════════════════════════════════════════
+  android-apk:
+    name: "📱 Android APK (Preview)"
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+        EAS_PROJECT_ID: db7b041c-4ebd-463e-8200-0fba79f76f81
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd mobile
+          npm install
+
+      - name: Prebuild Android
+        script: |
+          cd mobile
+          npx expo prebuild --platform android --clean
+
+      - name: Build APK
+        script: |
+          cd mobile/android
+          chmod +x gradlew
+          ./gradlew assembleRelease 2>&1
+
+    artifacts:
+      - mobile/android/app/build/outputs/**/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - ibrahim@n8nar.com
+        notify:
+          success: true
+          failure: true
+
+  # ══════════════════════════════════════════════
+  # Android AAB — Google Play Store
+  # ══════════════════════════════════════════════
+  android-production:
+    name: "🚀 Android AAB — Google Play"
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      android_signing:
+        - taallam_keystore
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
+        EAS_PROJECT_ID: db7b041c-4ebd-463e-8200-0fba79f76f81
+        PACKAGE_NAME: com.faahm.app
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd mobile
+          npm install
+
+      - name: Prebuild Android
+        script: |
+          cd mobile
+          npx expo prebuild --platform android --clean
+
+      - name: Sign & Build AAB
+        script: |
+          cd mobile/android
+          chmod +x gradlew
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file=$CM_KEYSTORE_PATH \
+            -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
+
+    artifacts:
+      - mobile/android/app/build/outputs/**/*.aab
+      - mobile/android/app/build/outputs/**/mapping.txt
+
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        in_app_update_priority: 3
+      email:
+        recipients:
+          - ibrahim@n8nar.com
+        notify:
+          success: true
+          failure: true
+
+  # ══════════════════════════════════════════════
+  # iOS — App Store
+  # ══════════════════════════════════════════════
+  ios-production:
+    name: "🍎 iOS — App Store"
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+
+    environment:
+      node: 20.11.0
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.faahm.app
+      vars:
+        EXPO_PUBLIC_SUPABASE_URL: https://raskcogecjfwuxvwldzp.supabase.co
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd mobile && npm install
+
+      - name: Prebuild iOS
+        script: |
+          cd mobile
+          npx expo prebuild --platform ios --clean
+
+      - name: Build iOS IPA
+        script: |
+          cd mobile/ios
+          xcodebuild -workspace Fahim.xcworkspace \
+            -scheme Fahim \
+            -configuration Release \
+            -archivePath Fahim.xcarchive \
+            archive
+          xcodebuild -exportArchive \
+            -archivePath Fahim.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath .
+
+    artifacts:
+      - mobile/ios/**/*.ipa
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+      email:
+        recipients:
+          - ibrahim@n8nar.com

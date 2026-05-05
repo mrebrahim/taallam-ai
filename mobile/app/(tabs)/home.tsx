@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, ActivityIndicator,
+  TouchableOpacity, ActivityIndicator, Image, Linking,
 } from 'react-native'
 import { router } from 'expo-router'
 import { useAuth } from '@/hooks/useAuth'
@@ -59,6 +59,7 @@ export default function HomeScreen() {
   const { isAr } = useLang()
 
   const [roadmaps, setRoadmaps]     = useState<any[]>([])
+  const [products, setProducts]     = useState<any[]>([])
   const [enrollments, setEnrollments] = useState<Set<string>>(new Set())
   const [progress, setProgress]     = useState<Record<string, any>>({})
   const [todayChallenge, setTodayChallenge] = useState<any>(null)
@@ -87,6 +88,7 @@ export default function HomeScreen() {
         .eq('scheduled_date', today)
         .maybeSingle(),
       supabase.from('streak_freezes').select('id').eq('user_id', user!.id).is('used_at', null),
+      supabase.from('digital_products').select('*, variants:product_variants(*)').eq('is_active', true).order('sort_order'),
     ])
 
     setRoadmaps(rm || [])
@@ -98,6 +100,7 @@ export default function HomeScreen() {
     }
     setTodayChallenge(dc?.challenge || null)
     setFreezeCount(freezes?.length || 0)
+    setProducts(prods || [])
 
     if (dc?.challenge) {
       const { data: attempt } = await supabase
@@ -358,6 +361,41 @@ export default function HomeScreen() {
           })}
         </View>
 
+        {/* Digital Products Section */}
+        {products.length > 0 && (
+          <View style={s.section}>
+            <View style={s.sectionHeader}>
+              <Text style={s.seeAll}></Text>
+              <Text style={s.sectionTitle}>{isAr ? '🛍️ منتجات رقمية' : '🛍️ Digital Products'}</Text>
+            </View>
+            {products.map((p: any) => (
+              <View key={p.id} style={s.productCard}>
+                {p.image_url ? (
+                  <Image source={{ uri: p.image_url }} style={s.productImg} />
+                ) : (
+                  <View style={[s.productImg, { backgroundColor: '#f0fdf4', justifyContent: 'center', alignItems: 'center' }]}>
+                    <Text style={{ fontSize: 28 }}>🛍️</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={s.productName}>{isAr ? p.name_ar : (p.name_en || p.name_ar)}</Text>
+                  {(isAr ? p.description_ar : p.description_en || p.description_ar) ? (
+                    <Text style={s.productDesc} numberOfLines={2}>{isAr ? p.description_ar : (p.description_en || p.description_ar)}</Text>
+                  ) : null}
+                  <View style={s.variantsRow}>
+                    {(p.variants || []).filter((v: any) => v.is_active).sort((a: any, b: any) => a.sort_order - b.sort_order).map((v: any) => (
+                      <TouchableOpacity key={v.id} style={s.variantBtn}>
+                        <Text style={s.variantPrice}>{v.price} {v.currency}</Text>
+                        <Text style={s.variantLabel}>{isAr ? v.label_ar : (v.label_en || v.label_ar)}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
         <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
@@ -433,4 +471,12 @@ const s = StyleSheet.create({
   priceBadge:     { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   priceTxt:       { fontSize: 11, fontWeight: '800' },
   arrow:          { fontSize: 16, color: '#ddd' },
+  productCard:    { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 2, borderColor: '#e2e8f0', flexDirection: 'row', gap: 12 },
+  productImg:     { width: 80, height: 80, borderRadius: 14, backgroundColor: '#f8fafc' },
+  productName:    { fontSize: 15, fontWeight: '800', color: '#0f172a', textAlign: 'right', marginBottom: 4 },
+  productDesc:    { fontSize: 12, color: '#64748b', textAlign: 'right', marginBottom: 8, lineHeight: 18 },
+  variantsRow:    { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' },
+  variantBtn:     { backgroundColor: '#f0fdf4', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: '#86efac' },
+  variantPrice:   { fontSize: 13, fontWeight: '900', color: '#166534' },
+  variantLabel:   { fontSize: 10, color: '#4ade80', fontWeight: '600' },
 })

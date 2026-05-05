@@ -31,6 +31,7 @@ export default function Dashboard() {
     { href:'/ads',         icon:'📢', label:'الإعلانات',  desc:'أضف إعلانات مستهدفة للمستخدمين', color:'#CE82FF' },
     { href:'/users',       icon:'👥', label:'المستخدمين', desc:'عرض بيانات كل المستخدمين', color:'#FF9600' },
     { href:'/roadmaps',    icon:'🗺️', label:'المسارات',   desc:'إدارة مسارات التعلم', color:'#FF4B4B' },
+    { href:'/products',    icon:'🛍️', label:'المنتجات الرقمية', desc:'أضف وعدّل المنتجات والأسعار', color:'#58CC02' },
   ]
 
   const STATS = [
