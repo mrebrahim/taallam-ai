@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator
+  StyleSheet, Alert, ActivityIndicator, Image
 } from 'react-native'
 import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
@@ -53,8 +53,7 @@ export default function LoginScreen() {
     <View style={s.container}>
       {/* Logo */}
       <View style={s.logo}>
-        <Text style={s.logoEmoji}>🤖</Text>
-        <Text style={s.logoName}>Taallam AI</Text>
+        <Image source={require('@/assets/logo.png')} style={s.logoImg} />
         <Text style={s.logoSub}>
           {isAr ? 'ابدأ رحلة التعلم اليومية' : 'Start your daily learning journey'}
         </Text>
@@ -95,7 +94,8 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         secureTextEntry
         textAlign={isAr ? 'right' : 'left'}
-        textContentType="password"
+        textContentType="oneTimeCode"
+        autoComplete="off"
       />
 
       {/* Login Button */}
@@ -125,8 +125,7 @@ export default function LoginScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f172a', padding: 28, justifyContent: 'center' },
   logo: { alignItems: 'center', marginBottom: 40 },
-  logoEmoji: { fontSize: 64, marginBottom: 12 },
-  logoName: { fontSize: 26, fontWeight: '900', color: '#fff', marginBottom: 6, letterSpacing: 1 },
+  logoImg: { width: 120, height: 120, borderRadius: 24, marginBottom: 12 },
   logoSub: { fontSize: 14, color: '#64748b', textAlign: 'center' },
   googleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
