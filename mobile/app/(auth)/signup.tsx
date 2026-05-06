@@ -32,24 +32,14 @@ export default function SignupScreen() {
     if (error) {
       Alert.alert(isAr ? 'خطأ' : 'Error', error.message)
     } else if (data.session) {
-      // Session exists = email confirmation disabled, go directly to app
+      // Email confirmation disabled - go directly to app
       router.replace('/(tabs)/home')
     } else if (data.user) {
-      // Try signing in immediately after signup
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
+      // OTP sent - go to verification screen
+      router.push({
+        pathname: '/(auth)/otp',
+        params: { email: email.trim().toLowerCase(), password }
       })
-      if (!loginError) {
-        router.replace('/(tabs)/home')
-      } else {
-        // Email confirmation required
-        Alert.alert(
-          isAr ? '✅ تم إنشاء الحساب' : '✅ Account Created',
-          isAr ? 'تحقق من إيميلك لتأكيد الحساب ثم سجل دخول' : 'Check your email to confirm your account',
-          [{ text: isAr ? 'حسناً' : 'OK', onPress: () => router.replace('/(auth)/login') }]
-        )
-      }
     }
   }
 
