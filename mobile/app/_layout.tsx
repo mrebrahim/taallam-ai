@@ -36,11 +36,12 @@ function AppNavigator() {
 
     // Listen to auth changes - navigate automatically on login/logout
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!chosen) return
       if (event === 'SIGNED_IN' && session) {
         router.replace('/(tabs)/home')
       } else if (event === 'SIGNED_OUT') {
         router.replace('/(auth)/login')
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        router.replace('/(tabs)/home')
       }
     })
 

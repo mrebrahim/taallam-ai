@@ -55,10 +55,15 @@ export default function LoginScreen() {
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl)
 
-      if (result.type === 'success' && result.url) {
+      // Handle result - check both success and dismiss (Android sometimes returns dismiss)
+      const resultUrl = result.type === 'success' ? result.url : 
+                        (result as any).url || ''
+
+      if (resultUrl && resultUrl.includes('access_token')) {
         // Extract tokens from URL hash or params
-        const urlStr = result.url
-        const hashPart = urlStr.includes('#') ? urlStr.split('#')[1] : urlStr.split('?')[1] || ''
+        const hashPart = resultUrl.includes('#') 
+          ? resultUrl.split('#')[1] 
+          : resultUrl.split('?')[1] || ''
         const params = new URLSearchParams(hashPart)
         const accessToken = params.get('access_token')
         const refreshToken = params.get('refresh_token')
@@ -70,7 +75,15 @@ export default function LoginScreen() {
           })
           Analytics.login('google')
           router.replace('/(tabs)/home')
+          return
         }
+      }
+
+      // Fallback: check if session was created even without explicit tokens
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        Analytics.login('google')
+        router.replace('/(tabs)/home')
       }
     } catch (e: any) {
       Alert.alert('Error', e.message)
