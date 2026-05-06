@@ -111,6 +111,11 @@ workflows:
       - name: Install dependencies
         script: cd mobile && npm install
 
+      - name: Set iOS build number
+        script: |
+          cd mobile
+          node -e "var fs=require('fs'),d=JSON.parse(fs.readFileSync('app.json'));if(!d.expo.ios)d.expo.ios={};d.expo.ios.buildNumber='14';fs.writeFileSync('app.json',JSON.stringify(d,null,2));console.log('iOS buildNumber=14')"
+
       - name: Prebuild iOS
         script: cd mobile && npx expo prebuild --platform ios --clean
 
