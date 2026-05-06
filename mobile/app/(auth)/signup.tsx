@@ -23,18 +23,22 @@ export default function SignupScreen() {
       return
     }
     setLoading(true)
-    const { error } = await supabase.auth.signUp({
-      email: email.trim(),
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
       password,
       options: { data: { full_name: fullName } }
     })
     setLoading(false)
     if (error) {
       Alert.alert(isAr ? 'خطأ' : 'Error', error.message)
+    } else if (data.session) {
+      // Session exists = email confirmation disabled, go directly to app
+      router.replace('/(tabs)/home')
     } else {
+      // Email confirmation required
       Alert.alert(
         isAr ? '✅ تم إنشاء الحساب' : '✅ Account Created',
-        isAr ? 'تحقق من إيميلك لتأكيد الحساب' : 'Check your email to confirm your account',
+        isAr ? 'تحقق من إيميلك لتأكيد الحساب ثم سجل دخول' : 'Check your email to confirm your account',
         [{ text: isAr ? 'حسناً' : 'OK', onPress: () => router.replace('/(auth)/login') }]
       )
     }

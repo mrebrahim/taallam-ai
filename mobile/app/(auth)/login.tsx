@@ -42,11 +42,36 @@ export default function LoginScreen() {
   }
 
   const handleGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: 'taallam://auth/callback' },
-    })
-    if (error) Alert.alert('Error', error.message)
+    try {
+      const redirectUrl = 'taallam://auth/callback'
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
+        },
+      })
+      if (error) { Alert.alert('Error', error.message); return }
+      
+      const { WebBrowser } = await import('expo-web-browser')
+      const result = await WebBrowser.openAuthSessionAsync(data.url!, redirectUrl)
+      
+      if (result.type === 'success' && result.url) {
+        const url = new URL(result.url)
+        const accessToken = url.searchParams.get('access_token')
+        const refreshToken = url.searchParams.get('refresh_token')
+        
+        if (accessToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          })
+          if (!sessionError) router.replace('/(tabs)/home')
+        }
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.message)
+    }
   }
 
   return (
