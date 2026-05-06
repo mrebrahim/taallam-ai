@@ -40,7 +40,27 @@ export function useAuth() {
   }, [])
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase.from('users').select('*').eq('id', userId).single()
+    let { data } = await supabase.from('users').select('*').eq('id', userId).single()
+
+    // No record? Create one automatically
+    if (!data) {
+      const { data: authData } = await supabase.auth.getUser()
+      const au = authData?.user
+      if (au) {
+        const email = au.email || ''
+        const base = email.split('@')[0].replace(/[^a-z0-9]/gi, '').toLowerCase()
+        const username = base + '_' + Math.floor(Math.random() * 9000 + 1000)
+        const { data: created } = await supabase.from('users').insert({
+          id: userId,
+          email,
+          full_name: au.user_metadata?.full_name || au.user_metadata?.name || base,
+          username,
+          avatar_url: au.user_metadata?.avatar_url || au.user_metadata?.picture || null,
+        }).select().single()
+        data = created
+      }
+    }
+
     setUser(data)
     setLoading(false)
   }

@@ -116,7 +116,7 @@ export default function HomeScreen() {
     }
   }
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <View style={s.loading}>
         <ActivityIndicator size="large" color={Colors.green} />
