@@ -11,7 +11,7 @@ import { useLang } from '@/lib/LanguageContext'
 export default function OTPScreen() {
   const { isAr } = useLang()
   const { email, password } = useLocalSearchParams<{ email: string; password: string }>()
-  const [otp, setOtp] = useState(['', '', '', '', '', ''])
+  const [otp, setOtp] = useState(['', '', '', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const inputs = useRef<any[]>([])
@@ -20,19 +20,19 @@ export default function OTPScreen() {
     // Handle paste - if more than 1 char, fill all boxes
     const digits = val.replace(/[^0-9]/g, '')
     if (digits.length > 1) {
-      const newOtp = ['', '', '', '', '', '']
+      const newOtp = ['', '', '', '', '', '', '', '']
       for (let i = 0; i < 6 && i < digits.length; i++) {
         newOtp[i] = digits[i]
       }
       setOtp(newOtp)
-      inputs.current[Math.min(digits.length, 5)]?.focus()
+      inputs.current[Math.min(digits.length, 7)]?.focus()
       return
     }
     // Single digit
     const newOtp = [...otp]
     newOtp[idx] = digits
     setOtp(newOtp)
-    if (digits && idx < 5) inputs.current[idx + 1]?.focus()
+    if (digits && idx < 7) inputs.current[idx + 1]?.focus()
     if (!digits && idx > 0) inputs.current[idx - 1]?.focus()
   }
 
@@ -47,7 +47,7 @@ export default function OTPScreen() {
 
   const handleVerify = async () => {
     const code = otp.join('')
-    if (code.length !== 6) {
+    if (code.length !== 8) {
       Alert.alert(isAr ? 'تنبيه' : 'Alert', isAr ? 'ادخل الكود كامل' : 'Enter the full code')
       return
     }
