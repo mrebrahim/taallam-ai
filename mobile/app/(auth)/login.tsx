@@ -4,10 +4,13 @@ import {
   StyleSheet, Alert, ActivityIndicator, Image
 } from 'react-native'
 import { router } from 'expo-router'
+import * as WebBrowser from 'expo-web-browser'
 import { supabase } from '@/lib/supabase'
 import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
 import { Analytics } from '@/lib/analytics'
+
+WebBrowser.maybeCompleteAuthSession()
 
 export default function LoginScreen() {
   const { isAr } = useLang()
