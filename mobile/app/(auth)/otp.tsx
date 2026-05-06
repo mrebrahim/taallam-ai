@@ -17,11 +17,32 @@ export default function OTPScreen() {
   const inputs = useRef<any[]>([])
 
   const handleChange = (val: string, idx: number) => {
+    // Handle paste - if more than 1 char, fill all boxes
+    const digits = val.replace(/[^0-9]/g, '')
+    if (digits.length > 1) {
+      const newOtp = ['', '', '', '', '', '']
+      for (let i = 0; i < 6 && i < digits.length; i++) {
+        newOtp[i] = digits[i]
+      }
+      setOtp(newOtp)
+      inputs.current[Math.min(digits.length, 5)]?.focus()
+      return
+    }
+    // Single digit
     const newOtp = [...otp]
-    newOtp[idx] = val.replace(/[^0-9]/g, '')
+    newOtp[idx] = digits
     setOtp(newOtp)
-    if (val && idx < 5) inputs.current[idx + 1]?.focus()
-    if (!val && idx > 0) inputs.current[idx - 1]?.focus()
+    if (digits && idx < 5) inputs.current[idx + 1]?.focus()
+    if (!digits && idx > 0) inputs.current[idx - 1]?.focus()
+  }
+
+  const handleKeyPress = (key: string, idx: number) => {
+    if (key === 'Backspace' && !otp[idx] && idx > 0) {
+      const newOtp = [...otp]
+      newOtp[idx - 1] = ''
+      setOtp(newOtp)
+      inputs.current[idx - 1]?.focus()
+    }
   }
 
   const handleVerify = async () => {
@@ -87,6 +108,7 @@ export default function OTPScreen() {
               style={[s.otpInput, digit ? s.otpInputFilled : {}]}
               value={digit}
               onChangeText={val => handleChange(val, idx)}
+              onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, idx)}
               keyboardType="numeric"
               maxLength={1}
               selectTextOnFocus
