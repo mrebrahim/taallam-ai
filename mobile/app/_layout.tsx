@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
@@ -13,19 +13,28 @@ SplashScreen.preventAutoHideAsync()
 
 function AppNavigator() {
   const { loading, chosen } = useLang()
+  const initialized = useRef(false)
+  const splashHidden = useRef(false)
+
+  const hideSplash = async () => {
+    if (splashHidden.current) return
+    splashHidden.current = true
+    await SplashScreen.hideAsync()
+  }
 
   useEffect(() => {
     if (loading) return
+    if (initialized.current) return
+    initialized.current = true
 
     const init = async () => {
-      await SplashScreen.hideAsync()
-
       if (!chosen) {
+        await hideSplash()
         router.replace('/lang')
         return
       }
-
       const { data: { session } } = await supabase.auth.getSession()
+      await hideSplash()
       if (session) {
         router.replace('/(tabs)/home')
       } else {
@@ -34,19 +43,18 @@ function AppNavigator() {
     }
     init()
 
-    // Listen to auth changes - navigate automatically on login/logout
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // Listen to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        await hideSplash()
         router.replace('/(tabs)/home')
       } else if (event === 'SIGNED_OUT') {
         router.replace('/(auth)/login')
-      } else if (event === 'TOKEN_REFRESHED' && session) {
-        router.replace('/(tabs)/home')
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [loading, chosen])
+  }, [loading])
 
   if (loading) {
     return (
@@ -63,14 +71,14 @@ function AppNavigator() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="auth/callback" />
-      <Stack.Screen name="courses" options={{ headerShown: false }} />
-        <Stack.Screen name="challenge/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="task/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="course/[slug]" options={{ headerShown: false }} />
-        <Stack.Screen name="lesson/[id]" options={{ presentation: 'card', animation: 'slide_from_right' }} />
+      <Stack.Screen name="courses" />
+      <Stack.Screen name="challenge/[id]" />
+      <Stack.Screen name="task/[id]" />
+      <Stack.Screen name="course/[slug]" />
+      <Stack.Screen name="lesson/[id]" options={{ presentation: 'card', animation: 'slide_from_right' }} />
       <Stack.Screen name="sadaqat/index" />
       <Stack.Screen name="sadaqat/[id]" />
-      <Stack.Screen name="store" options={{ headerShown: false }} />
+      <Stack.Screen name="store" />
     </Stack>
   )
 }
