@@ -33,6 +33,18 @@ function AppNavigator() {
       }
     }
     init()
+
+    // Listen to auth changes - navigate automatically on login/logout
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!chosen) return
+      if (event === 'SIGNED_IN' && session) {
+        router.replace('/(tabs)/home')
+      } else if (event === 'SIGNED_OUT') {
+        router.replace('/(auth)/login')
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [loading, chosen])
 
   if (loading) {
@@ -57,7 +69,6 @@ function AppNavigator() {
         <Stack.Screen name="lesson/[id]" options={{ presentation: 'card', animation: 'slide_from_right' }} />
       <Stack.Screen name="sadaqat/index" />
       <Stack.Screen name="sadaqat/[id]" />
-      <Stack.Screen name="store" options={{ headerShown: false }} />
       <Stack.Screen name="store" options={{ headerShown: false }} />
     </Stack>
   )
