@@ -46,7 +46,7 @@ export default function LoginScreen() {
 
   const handleGoogle = async () => {
     try {
-      const redirectUrl = 'taallam://auth/callback'
+      const redirectUrl = 'faahm://auth/callback'
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
