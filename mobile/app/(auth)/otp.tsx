@@ -51,9 +51,17 @@ export default function OTPScreen() {
 
   const handleResend = async () => {
     setResending(true)
-    await supabase.auth.resend({ type: 'signup', email: email! })
+    const { error } = await supabase.auth.resend({ 
+      type: 'signup', 
+      email: email!,
+      options: { emailRedirectTo: undefined }
+    })
     setResending(false)
-    Alert.alert(isAr ? '✅ تم' : '✅ Sent', isAr ? 'تم إرسال كود جديد' : 'New code sent')
+    if (error) {
+      Alert.alert(isAr ? 'خطأ' : 'Error', error.message)
+    } else {
+      Alert.alert(isAr ? '✅ تم' : '✅ Sent', isAr ? 'تم إرسال كود جديد على إيميلك' : 'New code sent to your email')
+    }
   }
 
   return (
