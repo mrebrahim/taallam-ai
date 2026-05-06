@@ -11,10 +11,30 @@ export default function RoadmapsPage() {
   const [form, setForm] = useState<any>({})
   const [editing, setEditing] = useState<string|null>(null)
   const [saving, setSaving] = useState(false)
+  const [waPhone, setWaPhone] = useState('201027555789')
+  const [waPrefix, setWaPrefix] = useState('أريد الاستفسار عن')
+  const [copiedId, setCopiedId] = useState<string|null>(null)
 
   useEffect(() => {
     fetch(`${URL2}/rest/v1/roadmaps?select=*&order=sort_order`, { headers: H }).then(r=>r.json()).then(setRoadmaps)
+    fetch(`${URL2}/rest/v1/app_settings?select=key,value`, { headers: H }).then(r=>r.json()).then((data: any[]) => {
+      data?.forEach((s: any) => {
+        if (s.key === 'whatsapp_number') setWaPhone(s.value)
+        if (s.key === 'whatsapp_message_prefix') setWaPrefix(s.value)
+      })
+    })
   }, [])
+
+  const buildWALink = (courseName: string) => {
+    const msg = `${waPrefix} ${courseName}`
+    return `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`
+  }
+
+  const copyLink = (id: string, link: string) => {
+    navigator.clipboard.writeText(link)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
   const save = async () => {
     setSaving(true)
@@ -47,9 +67,26 @@ export default function RoadmapsPage() {
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700, color:'#e2e8f0', fontSize:18, marginBottom:4}}>{r.title_ar}</div>
                   <div style={{color:'#64748b', fontSize:13}}>{r.description_ar}</div>
-                  <div style={{fontSize:12, color:'#94a3b8', marginTop:6}}>slug: {r.slug}</div>
+                  <div style={{display:'flex', gap:12, marginTop:6, alignItems:'center'}}>
+                    <span style={{fontSize:12, color:'#94a3b8'}}>slug: {r.slug}</span>
+                    {r.price_egp > 0 && <span style={{fontSize:13, fontWeight:700, color:'#58CC02'}}>{r.price_egp} ج.م</span>}
+                    {r.price_egp === 0 && <span style={{fontSize:11, color:'#64748b', background:'#1e293b', border:'1px solid #334155', borderRadius:6, padding:'2px 8px'}}>مجاني</span>}
+                  </div>
                 </div>
-                <button onClick={()=>{setForm(r);setEditing(r.id)}} style={{padding:'8px 16px', borderRadius:8, border:'1px solid #334155', background:'transparent', color:'#94a3b8', cursor:'pointer', fontSize:13}}>تعديل</button>
+                <div style={{display:'flex', gap:8, alignItems:'center'}}>
+                  {r.price_egp > 0 && (() => {
+                    const link = buildWALink(r.title_ar || r.title || r.slug)
+                    return (
+                      <div style={{display:'flex', gap:6}}>
+                        <a href={link} target="_blank" style={{padding:'8px 14px', borderRadius:8, border:'none', background:'#25D366', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:700, textDecoration:'none'}}>🟢 اختبر</a>
+                        <button onClick={() => copyLink(r.id, link)} style={{padding:'8px 14px', borderRadius:8, border:'1px solid #334155', background: copiedId===r.id ? '#166534' : 'transparent', color: copiedId===r.id ? '#86efac' : '#94a3b8', cursor:'pointer', fontSize:12}}>
+                          {copiedId===r.id ? '✅ تم' : '📋 نسخ'}
+                        </button>
+                      </div>
+                    )
+                  })()}
+                  <button onClick={()=>{setForm(r);setEditing(r.id)}} style={{padding:'8px 16px', borderRadius:8, border:'1px solid #334155', background:'transparent', color:'#94a3b8', cursor:'pointer', fontSize:13}}>تعديل</button>
+                </div>
               </div>
             )}
           </div>
