@@ -67,15 +67,6 @@
       "eas": {
         "projectId": "db7b041c-4ebd-463e-8200-0fba79f76f81"
       }
-    },
-    "updates": {
-      "url": "https://u.expo.dev/taallam-faahm",
-      "enabled": true,
-      "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 0
-    },
-    "runtimeVersion": {
-      "policy": "sdkVersion"
     }
   }
 }
