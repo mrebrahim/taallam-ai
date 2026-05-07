@@ -30,6 +30,22 @@ export default function SignupScreen() {
     })
     setLoading(false)
     if (error) {
+      // If email exists but not confirmed → resend OTP and go to OTP screen
+      if (error.message?.includes('already registered') || error.message?.includes('already been registered')) {
+        // Try to resend OTP for unconfirmed user
+        const { error: resendErr } = await supabase.auth.resend({
+          type: 'signup',
+          email: email.trim().toLowerCase(),
+        })
+        if (!resendErr) {
+          router.push({ pathname: '/(auth)/otp', params: { email: email.trim().toLowerCase(), password } })
+        } else {
+          // Email confirmed and active → show error
+          Alert.alert(isAr ? 'الإيميل مستخدم' : 'Email in use', isAr ? 'هذا الإيميل مسجّل بالفعل، سجّل دخول' : 'This email is already registered, please sign in')
+          router.replace('/(auth)/login')
+        }
+        return
+      }
       Alert.alert(isAr ? 'خطأ' : 'Error', error.message)
     } else if (data.session) {
       // Email confirmation disabled - go directly to app
