@@ -32,13 +32,19 @@ export default function RoadmapsPage() {
     if (!form.title_ar || !form.slug) return setMsg('⚠️ الاسم والـ slug مطلوبين')
     setSaving(true)
     const body = { title_ar:form.title_ar, title_en:form.title_en||'', description_ar:form.description_ar||'', slug:form.slug, price_egp:parseFloat(form.price_egp)||0, original_price_egp:parseFloat(form.original_price_egp)||0, is_active:form.is_active, sort_order:parseInt(form.sort_order)||0, color_hex:form.color_hex||'#58CC02', cover_image_url:form.cover_image_url||null, thumbnail_url:form.thumbnail_url||null, intro_video_url:form.intro_video_url||null, duration_hours:parseFloat(form.duration_hours)||0, level:form.level||'beginner', cta_label_ar:form.cta_label_ar||'تواصل الآن', cta_type:form.cta_type||'whatsapp', cta_url:form.cta_url||null, cta2_label_ar:form.cta2_label_ar||null, cta2_type:form.cta2_type||'whatsapp', cta2_url:form.cta2_url||null }
-    if (editing === 'new') {
-      await fetch(`${URL2}/rest/v1/roadmaps`, { method:'POST', headers:H, body:JSON.stringify(body) })
-      setMsg('✅ تم إنشاء المسار!')
-    } else {
-      await fetch(`${URL2}/rest/v1/roadmaps?id=eq.${editing}`, { method:'PATCH', headers:H, body:JSON.stringify(body) })
-      setMsg('✅ تم الحفظ!')
+    const payload = editing === 'new' ? body : { id: editing, ...body }
+    const res = await fetch('/api/save-roadmap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    const result = await res.json()
+    if (!result.ok) {
+      setMsg('❌ خطأ: ' + (result.error || 'فشل الحفظ'))
+      setSaving(false)
+      return
     }
+    setMsg(editing === 'new' ? '✅ تم إنشاء المسار!' : '✅ تم الحفظ!')
     setSaving(false); setEditing(null); load()
     setTimeout(()=>setMsg(''),3000)
   }
