@@ -55,7 +55,7 @@ export default function LearnScreen() {
   // ── Load sections+lessons for selected roadmap ────────────
   useEffect(() => {
     if (!selected || !user) return
-    if (!enrolledIds.has(selected)) return
+    // Load sections for all roadmaps (enrolled = unlocked, not enrolled = locked)
     if (sectionsMap[selected]) return   // already loaded
 
     setLoadingRmId(selected)
@@ -94,7 +94,7 @@ export default function LearnScreen() {
     })
   }
 
-  if (loading || !user) return (
+  if (loading) return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.center}><ActivityIndicator size="large" color={Colors.green} /></View>
     </SafeAreaView>
