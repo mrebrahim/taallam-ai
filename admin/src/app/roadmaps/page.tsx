@@ -8,7 +8,7 @@ const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const H = { 'apikey': SVC||ANON, 'Authorization': `Bearer ${SVC||ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
 const HR = { 'apikey': ANON, 'Authorization': `Bearer ${ANON}` }
 
-const EMPTY = { title_ar:'', title_en:'', description_ar:'', slug:'', price_egp:0, is_active:true, sort_order:0, icon:'⚡', color:'#58CC02', cta_label_ar:'تواصل الآن', cta_type:'whatsapp', cta_url:'', cta2_label_ar:'', cta2_type:'whatsapp', cta2_url:'' }
+const EMPTY = { title_ar:'', title_en:'', description_ar:'', slug:'', price_egp:0, original_price_egp:0, is_active:true, sort_order:0, icon:'⚡', color:'#58CC02', thumbnail_url:'', cover_image_url:'', intro_video_url:'', duration_hours:0, level:'beginner', cta_label_ar:'تواصل الآن', cta_type:'whatsapp', cta_url:'', cta2_label_ar:'', cta2_type:'whatsapp', cta2_url:'' }
 
 export default function RoadmapsPage() {
   const [roadmaps, setRoadmaps] = useState<any[]>([])
@@ -31,7 +31,7 @@ export default function RoadmapsPage() {
   const save = async () => {
     if (!form.title_ar || !form.slug) return setMsg('⚠️ الاسم والـ slug مطلوبين')
     setSaving(true)
-    const body = { title_ar:form.title_ar, title_en:form.title_en||'', description_ar:form.description_ar||'', slug:form.slug, price_egp:parseFloat(form.price_egp)||0, is_active:form.is_active, sort_order:parseInt(form.sort_order)||0, icon:form.icon||'⚡', color:form.color||'#58CC02', cta_label_ar:form.cta_label_ar||'تواصل الآن', cta_type:form.cta_type||'whatsapp', cta_url:form.cta_url||null, cta2_label_ar:form.cta2_label_ar||null, cta2_type:form.cta2_type||'whatsapp', cta2_url:form.cta2_url||null }
+    const body = { title_ar:form.title_ar, title_en:form.title_en||'', description_ar:form.description_ar||'', slug:form.slug, price_egp:parseFloat(form.price_egp)||0, original_price_egp:parseFloat(form.original_price_egp)||0, is_active:form.is_active, sort_order:parseInt(form.sort_order)||0, icon:form.icon||'⚡', color:form.color||'#58CC02', cover_image_url:form.cover_image_url||null, intro_video_url:form.intro_video_url||null, level:form.level||'beginner', cta_label_ar:form.cta_label_ar||'تواصل الآن', cta_type:form.cta_type||'whatsapp', cta_url:form.cta_url||null, cta2_label_ar:form.cta2_label_ar||null, cta2_type:form.cta2_type||'whatsapp', cta2_url:form.cta2_url||null }
     if (editing === 'new') {
       await fetch(`${URL2}/rest/v1/roadmaps`, { method:'POST', headers:H, body:JSON.stringify(body) })
       setMsg('✅ تم إنشاء المسار!')
@@ -74,6 +74,18 @@ export default function RoadmapsPage() {
               <div><label style={lbl}>Slug * (مثال: n8n-automation)</label><input style={inp} value={form.slug||''} onChange={e=>setForm({...form,slug:e.target.value.toLowerCase().replace(/\s+/g,'-')})} /></div>
               <div><label style={lbl}>السعر (ج.م) — 0 = مجاني</label><input style={inp} type="number" value={form.price_egp||0} onChange={e=>setForm({...form,price_egp:e.target.value})} /></div>
             </div>
+            <div style={{...g2,marginBottom:12}}>
+              <div><label style={lbl}>السعر الأصلي (اختياري — للخط)</label><input style={inp} type="number" value={form.original_price_egp||0} onChange={e=>setForm({...form,original_price_egp:e.target.value})} /></div>
+              <div><label style={lbl}>المستوى</label>
+                <select style={inp} value={form.level||'beginner'} onChange={e=>setForm({...form,level:e.target.value})}>
+                  <option value="beginner">مبتدئ</option>
+                  <option value="intermediate">متوسط</option>
+                  <option value="advanced">متقدم</option>
+                </select>
+              </div>
+            </div>
+            <div style={{marginBottom:12}}><label style={lbl}>🖼️ صورة الغلاف (Cover Image URL)</label><input style={inp} placeholder="https://..." value={form.cover_image_url||''} onChange={e=>setForm({...form,cover_image_url:e.target.value})} /></div>
+            <div style={{marginBottom:12}}><label style={lbl}>🎬 فيديو تعريفي (YouTube URL — مثال: https://youtube.com/watch?v=xxx)</label><input style={inp} placeholder="https://youtube.com/watch?v=..." value={form.intro_video_url||''} onChange={e=>setForm({...form,intro_video_url:e.target.value})} /></div>
             <div style={{...g2,marginBottom:16}}>
               <div><label style={lbl}>الأيقونة (emoji)</label><input style={inp} value={form.icon||'⚡'} onChange={e=>setForm({...form,icon:e.target.value})} /></div>
               <div style={{display:'flex',alignItems:'center',gap:10,paddingTop:20}}>

@@ -270,37 +270,73 @@ export default function LearnScreen() {
             const m        = ROADMAP_META[rm.slug as keyof typeof ROADMAP_META]
             const isEnr    = enrolledIds.has(rm.id)
             return (
-              <View key={rm.id} style={[s.courseCard, { borderColor: isEnr ? (m?.color + '60' || Colors.border) : Colors.border }]}>
-                <View style={s.courseCardRow}>
-                  <View style={[s.courseCardIcon, { backgroundColor: m?.bg || '#f1f5f9' }]}>
-                    <Text style={{ fontSize: 28 }}>{m?.emoji || '📘'}</Text>
+              <TouchableOpacity key={rm.id} style={s.courseCard} activeOpacity={0.92}
+                onPress={() => router.push(`/course/${rm.slug}`)}>
+                {/* Cover Image or Color */}
+                {rm.cover_image_url || rm.thumbnail_url ? (
+                  <Image source={{ uri: rm.cover_image_url || rm.thumbnail_url }} style={s.courseThumb} resizeMode="cover" />
+                ) : (
+                  <View style={[s.courseThumb, { backgroundColor: m?.bg || '#1e293b', justifyContent: 'center', alignItems: 'center' }]}>
+                    <Text style={{ fontSize: 48 }}>{m?.emoji || rm.icon || '📘'}</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.courseCardTitle}>{m?.label || rm.title_ar}</Text>
-                    <Text style={s.courseCardSub} numberOfLines={2}>{rm.description_ar || ''}</Text>
+                )}
+
+                <View style={s.courseCardBody}>
+                  <View style={s.courseCardRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.courseCardTitle}>{rm.title_ar}</Text>
+                      <Text style={s.courseCardSub} numberOfLines={2}>{rm.description_ar || ''}</Text>
+                    </View>
+                  </View>
+
+                  {/* Price & Status */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                     {isEnr ? (
                       <View style={[s.enrolledBadge, { backgroundColor: Colors.green + '20' }]}>
-                        <Text style={{ color: Colors.green, fontSize: 11, fontWeight: '800' }}>✓ مشترك</Text>
+                        <Text style={{ color: Colors.green, fontSize: 12, fontWeight: '800' }}>✅ مشترك</Text>
                       </View>
                     ) : (
-                      <Text style={[s.courseCardPrice, { color: m?.color || Colors.blue }]}>
-                        {rm.price_egp > 0 ? `${rm.price_egp?.toLocaleString()} ج.م` : 'مجاني'}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Text style={[s.courseCardPrice, { color: m?.color || Colors.green }]}>
+                          {rm.price_egp > 0 ? `${rm.price_egp?.toLocaleString()} ج.م` : '🎁 مجاني'}
+                        </Text>
+                        {rm.original_price_egp > 0 && rm.original_price_egp > rm.price_egp && (
+                          <Text style={{ fontSize: 12, color: '#94a3b8', textDecorationLine: 'line-through' }}>{rm.original_price_egp?.toLocaleString()} ج.م</Text>
+                        )}
+                      </View>
                     )}
+                    <Text style={{ fontSize: 12, color: '#94a3b8' }}>🔍 تفاصيل →</Text>
                   </View>
+
+                  {/* CTA Buttons */}
+                  {!isEnr && (
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {rm.cta_label_ar && (
+                        <TouchableOpacity
+                          style={[s.ctaSmall, { flex: rm.cta2_label_ar ? 1 : undefined, backgroundColor: rm.cta_type === 'payment' ? '#1e40af' : Colors.green }]}
+                          onPress={(e) => { e.stopPropagation?.(); openCTA(rm.cta_type||'whatsapp', rm.cta_url||null, rm.title_ar) }}
+                        >
+                          <Text style={s.ctaSmallTxt}>{rm.cta_type==='payment'?'💳 ':rm.cta_type==='url'?'🔗 ':'💬 '}{rm.cta_label_ar}</Text>
+                        </TouchableOpacity>
+                      )}
+                      {rm.cta2_label_ar && (
+                        <TouchableOpacity
+                          style={[s.ctaSmall, { flex: 1, backgroundColor: rm.cta2_type === 'payment' ? '#1e40af' : '#25D366' }]}
+                          onPress={(e) => { e.stopPropagation?.(); openCTA(rm.cta2_type||'whatsapp', rm.cta2_url||null, rm.title_ar) }}
+                        >
+                          <Text style={s.ctaSmallTxt}>{rm.cta2_type==='payment'?'💳 ':rm.cta2_type==='url'?'🔗 ':'💬 '}{rm.cta2_label_ar}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                  {isEnr && (
+                    <TouchableOpacity style={[s.ctaSmall, { backgroundColor: m?.color || Colors.blue }]}
+                      onPress={() => router.push(`/course/${rm.slug}`)}>
+                      <Text style={s.ctaSmallTxt}>▶ متابعة الكورس</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-                {isEnr ? (
-                  <TouchableOpacity style={[s.courseCardBtn, { backgroundColor: m?.color || Colors.blue }]}
-                    onPress={() => { setSelected(rm.id); }}>
-                    <Text style={s.courseCardBtnTxt}>▶ متابعة الكورس</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity style={[s.courseCardBtn, { backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: Colors.border }]}
-                    onPress={() => Linking.openURL(SUPPORT_WHATSAPP)}>
-                    <Text style={[s.courseCardBtnTxt, { color: Colors.text }]}>💬 تواصل مع الدعم للاشتراك</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+              </TouchableOpacity>
             )
           })}
         </View>
@@ -363,8 +399,12 @@ const s = StyleSheet.create({
   // All courses
   allCoursesSection:{ marginTop: 10 },
   allCoursesTitle:  { fontSize: 17, fontWeight: '900', color: Colors.text, marginBottom: 12, textAlign: 'right' },
-  courseCard:       { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 2 },
-  courseCardRow:    { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  courseCard:       { backgroundColor: '#fff', borderRadius: 18, marginBottom: 16, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
+  courseThumb:      { width: '100%', height: 160 },
+  courseCardBody:   { padding: 14 },
+  courseCardRow:    { flexDirection: 'row', gap: 12, marginBottom: 10 },
+  ctaSmall:         { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, alignItems: 'center' },
+  ctaSmallTxt:      { fontSize: 13, fontWeight: '800', color: '#fff' },
   courseCardIcon:   { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   courseCardTitle:  { fontSize: 15, fontWeight: '900', color: Colors.text, textAlign: 'right', marginBottom: 4 },
   courseCardSub:    { fontSize: 12, color: Colors.textSub, textAlign: 'right', lineHeight: 18 },
