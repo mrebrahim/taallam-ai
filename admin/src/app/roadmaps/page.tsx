@@ -38,7 +38,7 @@ export default function RoadmapsPage() {
 
   const save = async () => {
     setSaving(true)
-    await fetch(`${URL2}/rest/v1/roadmaps?id=eq.${editing}`, { method:'PATCH', headers: H, body: JSON.stringify({ title_ar: form.title_ar, description_ar: form.description_ar, is_active: form.is_active }) })
+    await fetch(`${URL2}/rest/v1/roadmaps?id=eq.${editing}`, { method:'PATCH', headers: H, body: JSON.stringify({ title_ar: form.title_ar, description_ar: form.description_ar, is_active: form.is_active, cta_label_ar: form.cta_label_ar, cta_type: form.cta_type, cta_url: form.cta_url }) })
     setSaving(false); setEditing(null)
     const r = await fetch(`${URL2}/rest/v1/roadmaps?select=*&order=sort_order`, { headers: H }).then(r=>r.json())
     setRoadmaps(r)
@@ -55,8 +55,24 @@ export default function RoadmapsPage() {
           <div key={r.id} style={{background:'#1e293b', borderRadius:12, padding:24, border:'1px solid #334155'}}>
             {editing===r.id ? (
               <div style={{display:'grid', gap:12}}>
-                <input value={form.title_ar} onChange={e=>setForm({...form,title_ar:e.target.value})} style={{padding:'10px 12px', borderRadius:8, border:'1px solid #334155', background:'#0f172a', color:'#fff', fontSize:14}}/>
-                <textarea value={form.description_ar||''} onChange={e=>setForm({...form,description_ar:e.target.value})} rows={2} style={{padding:'10px 12px', borderRadius:8, border:'1px solid #334155', background:'#0f172a', color:'#fff', fontSize:14, resize:'vertical'}}/>
+                <input placeholder="اسم المسار" value={form.title_ar} onChange={e=>setForm({...form,title_ar:e.target.value})} style={{padding:'10px 12px', borderRadius:8, border:'1px solid #334155', background:'#0f172a', color:'#fff', fontSize:14}}/>
+                <textarea placeholder="الوصف" value={form.description_ar||''} onChange={e=>setForm({...form,description_ar:e.target.value})} rows={2} style={{padding:'10px 12px', borderRadius:8, border:'1px solid #334155', background:'#0f172a', color:'#fff', fontSize:14, resize:'vertical'}}/>
+                
+                <div style={{background:'#0f172a', borderRadius:10, padding:14, border:'1px solid #334155'}}>
+                  <div style={{fontSize:12, color:'#94a3b8', marginBottom:10, fontWeight:700}}>🔘 زرار الـ CTA</div>
+                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10}}>
+                    <input placeholder="نص الزرار (عربي) — مثال: تواصل الآن" value={form.cta_label_ar||''} onChange={e=>setForm({...form,cta_label_ar:e.target.value})} style={{padding:'10px 12px', borderRadius:8, border:'1px solid #334155', background:'#1e293b', color:'#fff', fontSize:13}}/>
+                    <select value={form.cta_type||'whatsapp'} onChange={e=>setForm({...form,cta_type:e.target.value})} style={{padding:'10px 12px', borderRadius:8, border:'1px solid #334155', background:'#1e293b', color:'#fff', fontSize:13}}>
+                      <option value="whatsapp">💬 واتساب</option>
+                      <option value="url">🔗 رابط خارجي</option>
+                      <option value="payment">💳 رابط دفع</option>
+                    </select>
+                  </div>
+                  {form.cta_type !== 'whatsapp' && (
+                    <input placeholder="الرابط — مثال: https://..." value={form.cta_url||''} onChange={e=>setForm({...form,cta_url:e.target.value})} style={{padding:'10px 12px', borderRadius:8, border:'1px solid #334155', background:'#1e293b', color:'#fff', fontSize:13, width:'100%', boxSizing:'border-box'}}/>
+                  )}
+                </div>
+
                 <div style={{display:'flex', gap:12}}>
                   <button onClick={save} disabled={saving} style={{padding:'8px 20px', borderRadius:8, border:'none', background:'#58CC02', color:'#fff', fontWeight:700, cursor:'pointer'}}>{saving?'...':'حفظ'}</button>
                   <button onClick={()=>setEditing(null)} style={{padding:'8px 20px', borderRadius:8, border:'1px solid #334155', background:'transparent', color:'#94a3b8', cursor:'pointer'}}>إلغاء</button>

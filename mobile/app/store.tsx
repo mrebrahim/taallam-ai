@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
-import { openWhatsApp, loadWASettings } from '@/lib/whatsapp'
+import { openCTA, loadWASettings } from '@/lib/whatsapp'
 import { Colors } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
 
@@ -70,9 +70,9 @@ export default function StoreScreen() {
                   <TouchableOpacity
                     style={s.waBtn}
                     activeOpacity={0.85}
-                    onPress={() => openWhatsApp(isAr ? p.name_ar : (p.name_en || p.name_ar))}
+                    onPress={() => openCTA(p.cta_type || 'whatsapp', p.cta_url || null, isAr ? p.name_ar : (p.name_en || p.name_ar))}
                   >
-                    <Text style={s.waBtnTxt}>💬 {isAr ? 'تواصل واتساب' : 'WhatsApp'}</Text>
+                    <Text style={s.waBtnTxt}>{p.cta_type === 'payment' ? '💳 ' : p.cta_type === 'url' ? '🔗 ' : '💬 '}{isAr ? (p.cta_label_ar || 'تواصل واتساب') : (p.cta_label_en || 'WhatsApp')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
