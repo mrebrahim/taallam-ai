@@ -9,7 +9,7 @@ const H_READ = { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
 const H = { 'apikey': SERVICE_KEY || ANON_KEY, 'Authorization': `Bearer ${SERVICE_KEY || ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
 
 type Variant = { id?: string; label_ar: string; label_en: string; price: string; currency: string; period: string; is_active: boolean; sort_order: number }
-type Product = { id?: string; name_ar: string; name_en: string; description_ar: string; description_en: string; image_url: string; is_active: boolean; sort_order: number; variants?: Variant[] }
+type Product = { id?: string; name_ar: string; name_en: string; description_ar: string; description_en: string; image_url: string; is_active: boolean; sort_order: number; variants?: Variant[]; cta_label_ar?: string; cta_type?: string; cta_url?: string; cta2_label_ar?: string; cta2_type?: string; cta2_url?: string }
 
 const EMPTY_PRODUCT: Product = { name_ar: '', name_en: '', description_ar: '', description_en: '', image_url: '', is_active: true, sort_order: 0 }
 const EMPTY_VARIANT: Variant = { label_ar: 'شهري', label_en: 'Monthly', price: '', currency: 'EGP', period: 'monthly', is_active: true, sort_order: 0 }
