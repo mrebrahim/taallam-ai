@@ -1,10 +1,9 @@
-import { useEffect, useRef } from 'react'
-import { Stack } from 'expo-router'
+import { useEffect, useRef, useCallback } from 'react'
+import { Stack, router } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import * as SplashScreen from 'expo-splash-screen'
 import { LangProvider, useLang } from '@/lib/LanguageContext'
-import { router } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { View, ActivityIndicator } from 'react-native'
 import { Colors } from '@/constants/Colors'
@@ -13,48 +12,56 @@ SplashScreen.preventAutoHideAsync()
 
 function AppNavigator() {
   const { loading, chosen } = useLang()
-  const initialized = useRef(false)
   const splashHidden = useRef(false)
+  const initDone = useRef(false)
 
-  const hideSplash = async () => {
+  const hideSplash = useCallback(async () => {
     if (splashHidden.current) return
     splashHidden.current = true
-    await SplashScreen.hideAsync()
-  }
+    try { await SplashScreen.hideAsync() } catch {}
+  }, [])
 
+  const goToHome = useCallback(() => {
+    hideSplash()
+    router.replace('/(tabs)/home')
+  }, [hideSplash])
+
+  const goToLogin = useCallback(() => {
+    hideSplash()
+    router.replace('/(auth)/login')
+  }, [hideSplash])
+
+  const goToLang = useCallback(() => {
+    hideSplash()
+    router.replace('/lang')
+  }, [hideSplash])
+
+  // Auth state listener — fires on ANY auth change including OTP verify
   useEffect(() => {
-    if (loading) return
-    if (initialized.current) return
-    initialized.current = true
-
-    const init = async () => {
-      if (!chosen) {
-        await hideSplash()
-        router.replace('/lang')
-        return
-      }
-      const { data: { session } } = await supabase.auth.getSession()
-      await hideSplash()
-      if (session) {
-        router.replace('/(tabs)/home')
-      } else {
-        router.replace('/(auth)/login')
-      }
-    }
-    init()
-
-    // Listen to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        await hideSplash()
-        router.replace('/(tabs)/home')
+        goToHome()
       } else if (event === 'SIGNED_OUT') {
-        router.replace('/(auth)/login')
+        goToLogin()
+      } else if (event === 'USER_UPDATED' && session) {
+        goToHome()
       }
     })
-
     return () => subscription.unsubscribe()
-  }, [loading])
+  }, [goToHome, goToLogin])
+
+  // Initial navigation
+  useEffect(() => {
+    if (loading || initDone.current) return
+    initDone.current = true
+
+    const init = async () => {
+      if (!chosen) { goToLang(); return }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) { goToHome() } else { goToLogin() }
+    }
+    init()
+  }, [loading, chosen])
 
   if (loading) {
     return (

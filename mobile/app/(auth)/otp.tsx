@@ -57,17 +57,16 @@ export default function OTPScreen() {
       token: code,
       type: 'email',
     })
+    setLoading(false)
     if (error) {
-      setLoading(false)
       Alert.alert(isAr ? 'خطأ' : 'Error', isAr ? 'كود غلط أو منتهي' : 'Wrong or expired code')
       return
     }
-    // Auto login after verification
+    // Navigation handled by auth state listener in _layout.tsx
+    // signInWithPassword to ensure session is set
     if (password) {
       await supabase.auth.signInWithPassword({ email: email!, password })
     }
-    setLoading(false)
-    router.replace('/(tabs)/home')
   }
 
   const handleResend = async () => {
