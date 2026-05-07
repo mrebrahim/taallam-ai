@@ -45,7 +45,7 @@ export default function ProductsPage() {
     setSaving(true)
     try {
       let productId = editing.id
-      const body = { name_ar: editing.name_ar, name_en: editing.name_en, description_ar: editing.description_ar, description_en: editing.description_en, image_url: editing.image_url, is_active: editing.is_active, sort_order: editing.sort_order, updated_at: new Date().toISOString() }
+      const body = { name_ar: editing.name_ar, name_en: editing.name_en, description_ar: editing.description_ar, description_en: editing.description_en, image_url: editing.image_url, is_active: editing.is_active, sort_order: editing.sort_order, cta_label_ar: editing.cta_label_ar, cta_type: editing.cta_type||'whatsapp', cta_url: editing.cta_url||null, cta2_label_ar: editing.cta2_label_ar||null, cta2_type: editing.cta2_type||'whatsapp', cta2_url: editing.cta2_url||null, updated_at: new Date().toISOString() }
 
       if (productId) {
         await fetch(`${URL}/rest/v1/digital_products?id=eq.${productId}`, { method: 'PATCH', headers: H, body: JSON.stringify(body) })
@@ -167,6 +167,33 @@ export default function ProductsPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 20 }}>
                 <input type="checkbox" checked={editing.is_active} onChange={e => setEditing({ ...editing, is_active: e.target.checked })} id="active" />
                 <label htmlFor="active" style={{ color: '#fff', fontSize: 14, cursor: 'pointer' }}>نشط (ظاهر للمستخدمين)</label>
+              </div>
+            </div>
+
+            {/* CTA Buttons */}
+            <div style={{ borderTop: '1px solid #334155', paddingTop: 16, marginBottom: 16 }}>
+              <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700 }}>🔘 أزرار الـ CTA</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 10 }}>
+                <div style={{ background: '#0f172a', borderRadius: 10, padding: 12, border: '1px solid #58CC02' }}>
+                  <label style={{ fontSize: 11, color: '#58CC02', display: 'block', marginBottom: 8, fontWeight: 700 }}>🟢 CTA الأول</label>
+                  <input style={{ ...S.input, marginBottom: 8 }} placeholder="نص الزرار — مثال: اشتري الآن" value={editing?.cta_label_ar || ''} onChange={e => setEditing({ ...editing!, cta_label_ar: e.target.value })} />
+                  <select style={S.input} value={editing?.cta_type || 'whatsapp'} onChange={e => setEditing({ ...editing!, cta_type: e.target.value })}>
+                    <option value="whatsapp">💬 واتساب</option>
+                    <option value="payment">💳 رابط دفع</option>
+                    <option value="url">🔗 رابط خارجي</option>
+                  </select>
+                  {editing?.cta_type !== 'whatsapp' && <input style={{ ...S.input, marginTop: 8 }} placeholder="https://..." value={editing?.cta_url || ''} onChange={e => setEditing({ ...editing!, cta_url: e.target.value })} />}
+                </div>
+                <div style={{ background: '#0f172a', borderRadius: 10, padding: 12, border: '1px solid #334155' }}>
+                  <label style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 8, fontWeight: 700 }}>🔵 CTA الثاني (اختياري)</label>
+                  <input style={{ ...S.input, marginBottom: 8 }} placeholder="نص الزرار — مثال: تواصل واتساب" value={editing?.cta2_label_ar || ''} onChange={e => setEditing({ ...editing!, cta2_label_ar: e.target.value })} />
+                  <select style={S.input} value={editing?.cta2_type || 'whatsapp'} onChange={e => setEditing({ ...editing!, cta2_type: e.target.value })}>
+                    <option value="whatsapp">💬 واتساب</option>
+                    <option value="payment">💳 رابط دفع</option>
+                    <option value="url">🔗 رابط خارجي</option>
+                  </select>
+                  {editing?.cta2_type !== 'whatsapp' && editing?.cta2_label_ar && <input style={{ ...S.input, marginTop: 8 }} placeholder="https://..." value={editing?.cta2_url || ''} onChange={e => setEditing({ ...editing!, cta2_url: e.target.value })} />}
+                </div>
               </div>
             </div>
 

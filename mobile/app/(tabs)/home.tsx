@@ -6,7 +6,7 @@ import {
 import { router } from 'expo-router'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
-import { openWhatsApp, loadWASettings } from '@/lib/whatsapp'
+import { openCTA, loadWASettings } from '@/lib/whatsapp'
 import { Colors, ROADMAP_META } from '@/constants/Colors'
 import { useLang } from '@/lib/LanguageContext'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -358,13 +358,22 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                 )}
-                {!isEnrolled && (
+                {!isEnrolled && roadmap?.cta_label_ar && (
                   <TouchableOpacity
-                    style={s.waIconBtn}
-                    onPress={e => { e.stopPropagation?.(); openWhatsApp(isAr ? meta.label : slug) }}
+                    style={s.ctaIconBtn}
+                    onPress={() => openCTA(roadmap.cta_type||'whatsapp', roadmap.cta_url||null, isAr ? meta.label : slug)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={{ fontSize: 18 }}>💬</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#1e40af' }}>{roadmap.cta_type==='payment'?'💳':roadmap.cta_type==='url'?'🔗':'💬'}</Text>
+                  </TouchableOpacity>
+                )}
+                {!isEnrolled && roadmap?.cta2_label_ar && (
+                  <TouchableOpacity
+                    style={[s.ctaIconBtn, { backgroundColor: '#dcfce7' }]}
+                    onPress={() => openCTA(roadmap.cta2_type||'whatsapp', roadmap.cta2_url||null, isAr ? meta.label : slug)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#166534' }}>{roadmap.cta2_type==='payment'?'💳':roadmap.cta2_type==='url'?'🔗':'💬'}</Text>
                   </TouchableOpacity>
                 )}
                 <Text style={s.arrow}>←</Text>
@@ -494,6 +503,7 @@ const s = StyleSheet.create({
   seeAllBtn:      { backgroundColor: '#f0fdf4', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: Colors.green, marginTop: 4 },
   seeAllBtnTxt:   { fontSize: 14, fontWeight: '800', color: Colors.green },
   waIconBtn:      { backgroundColor: '#dcfce7', borderRadius: 10, padding: 8, justifyContent: 'center', alignItems: 'center' },
+  ctaIconBtn:     { backgroundColor: '#dbeafe', borderRadius: 10, padding: 8, justifyContent: 'center', alignItems: 'center' },
   productCard:    { backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 2, borderColor: '#e2e8f0', flexDirection: 'row', gap: 12 },
   productImg:     { width: 80, height: 80, borderRadius: 14, backgroundColor: '#f8fafc' },
   productName:    { fontSize: 15, fontWeight: '800', color: '#0f172a', textAlign: 'right', marginBottom: 4 },

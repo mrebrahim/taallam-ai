@@ -67,13 +67,26 @@ export default function StoreScreen() {
                       ))}
                     </View>
                   )}
-                  <TouchableOpacity
-                    style={s.waBtn}
-                    activeOpacity={0.85}
-                    onPress={() => openCTA(p.cta_type || 'whatsapp', p.cta_url || null, isAr ? p.name_ar : (p.name_en || p.name_ar))}
-                  >
-                    <Text style={s.waBtnTxt}>{p.cta_type === 'payment' ? '💳 ' : p.cta_type === 'url' ? '🔗 ' : '💬 '}{isAr ? (p.cta_label_ar || 'تواصل واتساب') : (p.cta_label_en || 'WhatsApp')}</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                    {(p.cta_label_ar) && (
+                      <TouchableOpacity
+                        style={[s.waBtn, p.cta_type==='payment' ? {backgroundColor:'#1e40af'} : {}]}
+                        activeOpacity={0.85}
+                        onPress={() => openCTA(p.cta_type||'whatsapp', p.cta_url||null, isAr ? p.name_ar : (p.name_en||p.name_ar))}
+                      >
+                        <Text style={s.waBtnTxt}>{p.cta_type==='payment'?'💳 ':p.cta_type==='url'?'🔗 ':'💬 '}{isAr ? p.cta_label_ar : (p.cta_label_en||p.cta_label_ar)}</Text>
+                      </TouchableOpacity>
+                    )}
+                    {p.cta2_label_ar && (
+                      <TouchableOpacity
+                        style={[s.waBtn, {backgroundColor: p.cta2_type==='payment'?'#1e40af':p.cta2_type==='url'?'#7c3aed':'#25D366', flex:1}]}
+                        activeOpacity={0.85}
+                        onPress={() => openCTA(p.cta2_type||'whatsapp', p.cta2_url||null, isAr ? p.name_ar : (p.name_en||p.name_ar))}
+                      >
+                        <Text style={s.waBtnTxt}>{p.cta2_type==='payment'?'💳 ':p.cta2_type==='url'?'🔗 ':'💬 '}{isAr ? p.cta2_label_ar : (p.cta2_label_en||p.cta2_label_ar)}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
               </View>
             )
