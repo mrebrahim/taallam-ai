@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 
 const URL2 = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -7,6 +8,9 @@ const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const H = { 'apikey': SVC||ANON, 'Authorization': `Bearer ${SVC||ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
 const HR = { 'apikey': ANON, 'Authorization': `Bearer ${ANON}` }
+
+// Use service role key if available, otherwise anon
+const supabaseAdmin = createClient(URL2, SVC || ANON)
 
 const EMPTY = { title_ar:'', title_en:'', description_ar:'', slug:'', price_egp:0, original_price_egp:0, is_active:true, sort_order:0, color_hex:'#58CC02', thumbnail_url:'', cover_image_url:'', intro_video_url:'', duration_hours:0, level:'beginner', cta_label_ar:'تواصل الآن', cta_type:'whatsapp', cta_url:'', cta2_label_ar:'', cta2_type:'whatsapp', cta2_url:'' }
 
@@ -32,15 +36,16 @@ export default function RoadmapsPage() {
     if (!form.title_ar || !form.slug) return setMsg('⚠️ الاسم والـ slug مطلوبين')
     setSaving(true)
     const body = { title_ar:form.title_ar, title_en:form.title_en||'', description_ar:form.description_ar||'', slug:form.slug, price_egp:parseFloat(form.price_egp)||0, original_price_egp:parseFloat(form.original_price_egp)||0, is_active:form.is_active, sort_order:parseInt(form.sort_order)||0, color_hex:form.color_hex||'#58CC02', cover_image_url:form.cover_image_url||null, thumbnail_url:form.thumbnail_url||null, intro_video_url:form.intro_video_url||null, duration_hours:parseFloat(form.duration_hours)||0, level:form.level||'beginner', cta_label_ar:form.cta_label_ar||'تواصل الآن', cta_type:form.cta_type||'whatsapp', cta_url:form.cta_url||null, cta2_label_ar:form.cta2_label_ar||null, cta2_type:form.cta2_type||'whatsapp', cta2_url:form.cta2_url||null }
-    const payload = editing === 'new' ? body : { id: editing, ...body }
-    const res = await fetch('/api/save-roadmap', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    const result = await res.json()
-    if (!result.ok) {
-      setMsg('❌ خطأ: ' + (result.error || 'فشل الحفظ'))
+    let error = null
+    if (editing === 'new') {
+      const { error: e } = await supabaseAdmin.from('roadmaps').insert(body)
+      error = e
+    } else {
+      const { error: e } = await supabaseAdmin.from('roadmaps').update(body).eq('id', editing)
+      error = e
+    }
+    if (error) {
+      setMsg('❌ خطأ: ' + error.message)
       setSaving(false)
       return
     }
