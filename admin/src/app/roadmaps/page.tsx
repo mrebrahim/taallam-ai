@@ -12,7 +12,7 @@ const HR = { 'apikey': ANON, 'Authorization': `Bearer ${ANON}` }
 // Use service role key if available, otherwise anon
 const supabaseAdmin = createClient(URL2, SVC || ANON)
 
-const EMPTY = { title_ar:'', title_en:'', description_ar:'', slug:'', price_egp:0, original_price_egp:0, is_active:true, sort_order:0, color_hex:'#58CC02', thumbnail_url:'', cover_image_url:'', intro_video_url:'', duration_hours:0, level:'beginner', cta_label_ar:'تواصل الآن', cta_type:'whatsapp', cta_url:'', cta2_label_ar:'', cta2_type:'whatsapp', cta2_url:'' }
+const EMPTY = { title_ar:'', title_en:'', description_ar:'', slug:'', price_egp:0, original_price_egp:0, is_active:true, sort_order:0, color_hex:'#58CC02', thumbnail_url:'', cover_image_url:'', intro_video_url:'', duration_hours:0, level:'beginner', instructor_name:'', instructor_title:'', instructor_avatar:'', instructor_bio:'', what_you_learn:'', requirements:'', total_students:0, rating:0, cta_label_ar:'تواصل الآن', cta_type:'whatsapp', cta_url:'', cta2_label_ar:'', cta2_type:'whatsapp', cta2_url:'' }
 
 export default function RoadmapsPage() {
   const [roadmaps, setRoadmaps] = useState<any[]>([])
@@ -35,7 +35,7 @@ export default function RoadmapsPage() {
   const save = async () => {
     if (!form.title_ar || !form.slug) return setMsg('⚠️ الاسم والـ slug مطلوبين')
     setSaving(true)
-    const body = { title_ar:form.title_ar, title:form.title_en||form.title_ar, description_ar:form.description_ar||'', description:form.description_ar||'', slug:form.slug, price_egp:parseFloat(form.price_egp)||0, original_price_egp:parseFloat(form.original_price_egp)||0, is_active:form.is_active, sort_order:parseInt(form.sort_order)||0, color_hex:form.color_hex||'#58CC02', cover_image_url:form.cover_image_url||null, thumbnail_url:form.thumbnail_url||null, intro_video_url:form.intro_video_url||null, duration_hours:parseFloat(form.duration_hours)||0, level:form.level||'beginner', cta_label_ar:form.cta_label_ar||'تواصل الآن', cta_type:form.cta_type||'whatsapp', cta_url:form.cta_url||null, cta2_label_ar:form.cta2_label_ar||null, cta2_type:form.cta2_type||'whatsapp', cta2_url:form.cta2_url||null }
+    const body = { title_ar:form.title_ar, title:form.title_en||form.title_ar, description_ar:form.description_ar||'', description:form.description_ar||'', slug:form.slug, price_egp:parseFloat(form.price_egp)||0, original_price_egp:parseFloat(form.original_price_egp)||0, is_active:form.is_active, sort_order:parseInt(form.sort_order)||0, color_hex:form.color_hex||'#58CC02', cover_image_url:form.cover_image_url||null, thumbnail_url:form.thumbnail_url||null, intro_video_url:form.intro_video_url||null, duration_hours:parseFloat(form.duration_hours)||0, level:form.level||'beginner', instructor_name:form.instructor_name||null, instructor_title:form.instructor_title||null, instructor_avatar:form.instructor_avatar||null, instructor_bio:form.instructor_bio||null, what_you_learn:form.what_you_learn ? form.what_you_learn.split('\n').map((s:string)=>s.trim()).filter(Boolean) : [], requirements:form.requirements ? form.requirements.split('\n').map((s:string)=>s.trim()).filter(Boolean) : [], total_students:parseInt(form.total_students)||0, rating:parseFloat(form.rating)||0, cta_label_ar:form.cta_label_ar||'تواصل الآن', cta_type:form.cta_type||'whatsapp', cta_url:form.cta_url||null, cta2_label_ar:form.cta2_label_ar||null, cta2_type:form.cta2_type||'whatsapp', cta2_url:form.cta2_url||null }
     let error = null
     if (editing === 'new') {
       const { error: e } = await supabaseAdmin.from('roadmaps').insert(body)
@@ -96,7 +96,27 @@ export default function RoadmapsPage() {
               </div>
             </div>
             <div style={{marginBottom:12}}><label style={lbl}>🖼️ صورة الغلاف (Cover Image URL)</label><input style={inp} placeholder="https://..." value={form.cover_image_url||''} onChange={e=>setForm({...form,cover_image_url:e.target.value})} /></div>
-            <div style={{marginBottom:12}}><label style={lbl}>🎬 فيديو تعريفي (YouTube URL — مثال: https://youtube.com/watch?v=xxx)</label><input style={inp} placeholder="https://youtube.com/watch?v=..." value={form.intro_video_url||''} onChange={e=>setForm({...form,intro_video_url:e.target.value})} /></div>
+            <div style={{marginBottom:12}}><label style={lbl}>🎬 فيديو تعريفي (Vimeo أو YouTube)</label><input style={inp} placeholder="https://vimeo.com/123456 أو https://youtube.com/watch?v=..." value={form.intro_video_url||''} onChange={e=>setForm({...form,intro_video_url:e.target.value})} /></div>
+            
+            <div style={{background:'#0f172a',borderRadius:10,padding:14,border:'1px solid #334155',marginBottom:12}}>
+              <div style={{fontSize:12,color:'#94a3b8',marginBottom:12,fontWeight:700}}>👨‍🏫 معلومات المحاضر</div>
+              <div style={{...g2,marginBottom:10}}>
+                <div><label style={lbl}>اسم المحاضر</label><input style={inp} value={form.instructor_name||''} onChange={e=>setForm({...form,instructor_name:e.target.value})} /></div>
+                <div><label style={lbl}>لقب المحاضر</label><input style={inp} placeholder="مثال: خبير أتمتة" value={form.instructor_title||''} onChange={e=>setForm({...form,instructor_title:e.target.value})} /></div>
+              </div>
+              <div style={{marginBottom:10}}><label style={lbl}>صورة المحاضر (URL)</label><input style={inp} placeholder="https://..." value={form.instructor_avatar||''} onChange={e=>setForm({...form,instructor_avatar:e.target.value})} /></div>
+              <div><label style={lbl}>نبذة المحاضر</label><textarea style={{...inp,height:60,resize:'vertical' as const}} value={form.instructor_bio||''} onChange={e=>setForm({...form,instructor_bio:e.target.value})} /></div>
+            </div>
+
+            <div style={{background:'#0f172a',borderRadius:10,padding:14,border:'1px solid #334155',marginBottom:12}}>
+              <div style={{fontSize:12,color:'#94a3b8',marginBottom:12,fontWeight:700}}>💡 ماذا ستتعلم (سطر لكل نقطة)</div>
+              <textarea style={{...inp,height:80,resize:'vertical' as const}} placeholder="احط كل نقطة في سطر..." value={form.what_you_learn||''} onChange={e=>setForm({...form,what_you_learn:e.target.value})} />
+            </div>
+
+            <div style={{background:'#0f172a',borderRadius:10,padding:14,border:'1px solid #334155',marginBottom:12}}>
+              <div style={{fontSize:12,color:'#94a3b8',marginBottom:12,fontWeight:700}}>📌 المتطلبات (سطر لكل نقطة)</div>
+              <textarea style={{...inp,height:60,resize:'vertical' as const}} placeholder="احط كل متطلب في سطر..." value={form.requirements||''} onChange={e=>setForm({...form,requirements:e.target.value})} />
+            </div>
             <div style={{...g2,marginBottom:16}}>
               <div><label style={lbl}>لون الكورس (hex)</label><input style={inp} value={form.color_hex||'#58CC02'} onChange={e=>setForm({...form,color_hex:e.target.value})} /></div>
               <div style={{display:'flex',alignItems:'center',gap:10,paddingTop:20}}>
