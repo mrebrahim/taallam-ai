@@ -14,7 +14,8 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.faahm.app"
+      "bundleIdentifier": "com.faahm.app",
+      "buildNumber": "15"
     },
     "android": {
       "adaptiveIcon": {

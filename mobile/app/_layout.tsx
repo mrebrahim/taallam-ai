@@ -14,7 +14,7 @@ function AppNavigator() {
   const { loading, chosen } = useLang()
   const splashHidden = useRef(false)
   const initDone = useRef(false)
-  const isLoggedIn = useRef(false)
+  const navigated = useRef(false)
 
   const hideSplash = useCallback(async () => {
     if (splashHidden.current) return
@@ -22,54 +22,44 @@ function AppNavigator() {
     try { await SplashScreen.hideAsync() } catch {}
   }, [])
 
-  // Auth state listener
+  const navigateOnce = useCallback((dest: string) => {
+    if (navigated.current) { hideSplash(); return }
+    navigated.current = true
+    hideSplash()
+    router.replace(dest as any)
+  }, [hideSplash])
+
+  // Only listen to SIGNED_OUT to handle logout
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        if (!isLoggedIn.current) {
-          isLoggedIn.current = true
-          hideSplash()
-          router.replace('/(tabs)/home')
-        }
-      } else if (event === 'SIGNED_OUT') {
-        isLoggedIn.current = false
+      if (event === 'SIGNED_OUT') {
+        navigated.current = false
         router.replace('/(auth)/login')
-      } else if (event === 'USER_UPDATED' && session && !isLoggedIn.current) {
-        isLoggedIn.current = true
-        hideSplash()
-        router.replace('/(tabs)/home')
+      } else if (event === 'SIGNED_IN' && session && !navigated.current) {
+        navigateOnce('/(tabs)/home')
       }
     })
     return () => subscription.unsubscribe()
-  }, [hideSplash])
+  }, [navigateOnce])
 
   // Initial navigation
   useEffect(() => {
     if (loading || initDone.current) return
     initDone.current = true
-
     const init = async () => {
-      if (!chosen) { hideSplash(); router.replace('/lang'); return }
+      if (!chosen) { navigateOnce('/lang'); return }
       const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        isLoggedIn.current = true
-        hideSplash()
-        router.replace('/(tabs)/home')
-      } else {
-        hideSplash()
-        router.replace('/(auth)/login')
-      }
+      if (session) { navigateOnce('/(tabs)/home') }
+      else { navigateOnce('/(auth)/login') }
     }
     init()
-  }, [loading, chosen, hideSplash])
+  }, [loading, chosen, navigateOnce])
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' }}>
-        <ActivityIndicator color={Colors.green} size="large" />
-      </View>
-    )
-  }
+  if (loading) return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' }}>
+      <ActivityIndicator color={Colors.green} size="large" />
+    </View>
+  )
 
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
