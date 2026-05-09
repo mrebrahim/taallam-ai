@@ -32,21 +32,25 @@ export default function LearnScreen() {
 
   // ── Load roadmaps + enrollments + progress ───────────────
   useEffect(() => {
-    if (!user) return
     const load = async () => {
-      const [{ data: rm }, { data: en }, { data: lp }] = await Promise.all([
-        supabase.from('roadmaps').select('*').eq('is_active', true).order('sort_order'),
-        supabase.from('course_enrollments').select('roadmap_id, expires_at').eq('user_id', user.id).eq('is_active', true),
-        supabase.from('user_lesson_progress').select('lesson_id').eq('user_id', user.id).eq('completed', true),
-      ])
+      // Always load roadmaps regardless of user state
+      const { data: rm } = await supabase
+        .from('roadmaps').select('*').eq('is_active', true).order('sort_order')
       setRoadmaps(rm || [])
-      setCompletedSet(new Set(lp?.map((d: any) => d.lesson_id) || []))
-      const now   = new Date()
-      const valid = new Set<string>((en || []).filter((e: any) => !e.expires_at || new Date(e.expires_at) > now).map((e: any) => e.roadmap_id))
-      setEnrolledIds(valid)
-      // Auto-select first enrolled roadmap
-      const first = (rm || []).find((r: any) => valid.has(r.id))
-      setSelected(first?.id || null)
+
+      if (user) {
+        const [{ data: en }, { data: lp }] = await Promise.all([
+          supabase.from('course_enrollments').select('roadmap_id, expires_at').eq('user_id', user.id).eq('is_active', true),
+          supabase.from('user_lesson_progress').select('lesson_id').eq('user_id', user.id).eq('completed', true),
+        ])
+        setCompletedSet(new Set(lp?.map((d: any) => d.lesson_id) || []))
+        const now = new Date()
+        const valid = new Set<string>((en || []).filter((e: any) => !e.expires_at || new Date(e.expires_at) > now).map((e: any) => e.roadmap_id))
+        setEnrolledIds(valid)
+        const first = (rm || []).find((r: any) => valid.has(r.id))
+        setSelected(first?.id || null)
+      }
+
       setLoading(false)
     }
     load()
