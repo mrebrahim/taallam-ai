@@ -14,6 +14,7 @@ function AppNavigator() {
   const { loading, chosen } = useLang()
   const splashHidden = useRef(false)
   const initDone = useRef(false)
+  const isLoggedIn = useRef(false)
 
   const hideSplash = useCallback(async () => {
     if (splashHidden.current) return
@@ -21,34 +22,26 @@ function AppNavigator() {
     try { await SplashScreen.hideAsync() } catch {}
   }, [])
 
-  const goToHome = useCallback(() => {
-    hideSplash()
-    router.replace('/(tabs)/home')
-  }, [hideSplash])
-
-  const goToLogin = useCallback(() => {
-    hideSplash()
-    router.replace('/(auth)/login')
-  }, [hideSplash])
-
-  const goToLang = useCallback(() => {
-    hideSplash()
-    router.replace('/lang')
-  }, [hideSplash])
-
-  // Auth state listener — fires on ANY auth change including OTP verify
+  // Auth state listener
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        goToHome()
+        if (!isLoggedIn.current) {
+          isLoggedIn.current = true
+          hideSplash()
+          router.replace('/(tabs)/home')
+        }
       } else if (event === 'SIGNED_OUT') {
-        goToLogin()
-      } else if (event === 'USER_UPDATED' && session) {
-        goToHome()
+        isLoggedIn.current = false
+        router.replace('/(auth)/login')
+      } else if (event === 'USER_UPDATED' && session && !isLoggedIn.current) {
+        isLoggedIn.current = true
+        hideSplash()
+        router.replace('/(tabs)/home')
       }
     })
     return () => subscription.unsubscribe()
-  }, [goToHome, goToLogin])
+  }, [hideSplash])
 
   // Initial navigation
   useEffect(() => {
@@ -56,12 +49,19 @@ function AppNavigator() {
     initDone.current = true
 
     const init = async () => {
-      if (!chosen) { goToLang(); return }
+      if (!chosen) { hideSplash(); router.replace('/lang'); return }
       const { data: { session } } = await supabase.auth.getSession()
-      if (session) { goToHome() } else { goToLogin() }
+      if (session) {
+        isLoggedIn.current = true
+        hideSplash()
+        router.replace('/(tabs)/home')
+      } else {
+        hideSplash()
+        router.replace('/(auth)/login')
+      }
     }
     init()
-  }, [loading, chosen])
+  }, [loading, chosen, hideSplash])
 
   if (loading) {
     return (
@@ -72,7 +72,7 @@ function AppNavigator() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+    <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="lang" />
       <Stack.Screen name="(auth)" />
