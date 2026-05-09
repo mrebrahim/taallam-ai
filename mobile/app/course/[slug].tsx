@@ -15,10 +15,15 @@ import { openCTA, loadWASettings } from '@/lib/whatsapp'
 const { width } = Dimensions.get('window')
 const VIDEO_H = width * 9 / 16
 
-function getYouTubeId(url: string): string | null {
-  if (!url) return null
-  const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)
-  return m ? m[1] : null
+function getVideoInfo(url: string): { type: 'youtube' | 'vimeo' | null, id: string | null } {
+  if (!url) return { type: null, id: null }
+  // YouTube
+  const yt = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)
+  if (yt) return { type: 'youtube', id: yt[1] }
+  // Vimeo
+  const vm = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/)
+  if (vm) return { type: 'vimeo', id: vm[1] }
+  return { type: null, id: null }
 }
 
 export default function CourseDetailScreen() {
@@ -34,19 +39,21 @@ export default function CourseDetailScreen() {
   const [showAll, setShowAll]       = useState(false)
   const PREVIEW_COUNT = 4
 
-  useEffect(() => { if (slug && user) load(); loadWASettings() }, [slug, user])
+  useEffect(() => { if (slug) load(); loadWASettings() }, [slug])
 
   const load = async () => {
     setLoading(true)
     const { data: rm } = await supabase.from('roadmaps').select('*').eq('slug', slug).single()
     setRoadmap(rm)
 
-    const { data: enrollment } = await supabase
-      .from('course_enrollments').select('id,expires_at')
-      .eq('user_id', user!.id).eq('roadmap_id', rm?.id).eq('is_active', true).maybeSingle()
-
-    const validEnrolled = enrollment
-      ? (!enrollment.expires_at || new Date(enrollment.expires_at) > new Date()) : false
+    let validEnrolled = false
+    if (user) {
+      const { data: enrollment } = await supabase
+        .from('course_enrollments').select('id,expires_at')
+        .eq('user_id', user.id).eq('roadmap_id', rm?.id).eq('is_active', true).maybeSingle()
+      validEnrolled = enrollment
+        ? (!enrollment.expires_at || new Date(enrollment.expires_at) > new Date()) : false
+    }
     setEnrolled(validEnrolled)
 
     const { data: ls } = await supabase
@@ -54,10 +61,10 @@ export default function CourseDetailScreen() {
       .eq('roadmap_id', rm?.id).eq('is_active', true).order('sort_order')
     setLessons(ls || [])
 
-    if (validEnrolled) {
+    if (validEnrolled && user) {
       const { data: lp } = await supabase
         .from('user_lesson_progress').select('lesson_id')
-        .eq('user_id', user!.id).eq('completed', true)
+        .eq('user_id', user.id).eq('completed', true)
       setCompleted(new Set(lp?.map((l: any) => l.lesson_id) || []))
     }
     setLoading(false)
@@ -70,7 +77,7 @@ export default function CourseDetailScreen() {
     <View style={s.center}><Text style={{ color: '#fff' }}>الكورس مش موجود</Text></View>
   )
 
-  const videoId = getYouTubeId(roadmap.intro_video_url || '')
+  const videoInfo = getVideoInfo(roadmap.intro_video_url || '')
   const visibleLessons = showAll ? lessons : lessons.slice(0, PREVIEW_COUNT)
   const price = roadmap.price_egp
   const origPrice = roadmap.original_price_egp
@@ -91,17 +98,20 @@ export default function CourseDetailScreen() {
         </View>
 
         {/* Video or Cover Image */}
-        {videoId ? (
+        {videoInfo.type && videoInfo.id ? (
           <View style={s.videoWrap}>
             <WebView
               style={{ width, height: VIDEO_H }}
-              source={{ uri: `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1` }}
+              source={{ uri: videoInfo.type === 'vimeo'
+                ? `https://player.vimeo.com/video/${videoInfo.id}?autoplay=0&title=0&byline=0&portrait=0`
+                : `https://www.youtube.com/embed/${videoInfo.id}?rel=0&modestbranding=1`
+              }}
               allowsFullscreenVideo
               javaScriptEnabled
             />
           </View>
-        ) : roadmap.cover_image_url ? (
-          <Image source={{ uri: roadmap.cover_image_url }} style={s.coverImg} resizeMode="cover" />
+        ) : (roadmap.cover_image_url || roadmap.thumbnail_url) ? (
+          <Image source={{ uri: roadmap.cover_image_url || roadmap.thumbnail_url }} style={s.coverImg} resizeMode="cover" />
         ) : (
           <View style={[s.coverImg, { backgroundColor: roadmap.color_hex || '#1e293b', justifyContent: 'center', alignItems: 'center' }]}>
             <Text style={{ fontSize: 64 }}>{roadmap.icon || '📚'}</Text>
