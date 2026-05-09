@@ -14,7 +14,7 @@ const EMPTY_LESSON = {
   title_ar: '', title: '', description_ar: '',
   xp_reward: 50, video_duration_seconds: 600,
   lesson_type: 'video' as const,
-  is_active: true, is_free: false, sort_order: 1,
+  is_active: true, is_free: false, is_free_preview: false, sort_order: 1,
   vimeo_id: '', vimeo_url: '', video_url: '',
   roadmap_id: '',
   content_blocks: [] as Block[],
@@ -52,6 +52,7 @@ function LessonRow({ l, i, isSel, toggleSelect, edit, del, challenges, COLORS, r
         {l.video_url && !hasVimeo && <span style={{ background: '#3a1a1a', color: '#f87171', borderRadius: 4, padding: '1px 6px', fontSize: 10 }}>📺</span>}
         {hasChallenge && <span style={{ background: '#2d1a4e', color: '#a78bfa', borderRadius: 4, padding: '1px 6px', fontSize: 10 }}>⚔️</span>}
         {l.is_free && <span style={{ background: '#166534', color: '#4ade80', borderRadius: 4, padding: '1px 6px', fontSize: 10 }}>🆓</span>}
+        {l.is_free_preview && <span style={{ background: '#1e40af', color: '#93c5fd', borderRadius: 4, padding: '1px 6px', fontSize: 10 }}>👁️</span>}
       </div>
       <span style={{ color: '#fbbf24', fontWeight: 700, fontSize: 12, minWidth: 35 }}>{l.xp_reward} XP</span>
       <span style={{ background: l.is_active ? '#166534' : '#7f1d1d', color: l.is_active ? '#bbf7d0' : '#fca5a5', borderRadius: 4, padding: '1px 8px', fontSize: 10 }}>
@@ -173,6 +174,7 @@ export default function LessonsPage() {
       sort_order: Number(form.sort_order) || 1,
       is_active: form.is_active,
       is_free: form.is_free,
+      is_free_preview: form.is_free_preview,
       content_blocks: form.content_blocks || [],
       resources: form.resources || [],
       linked_challenge_id: form.linked_challenge_id || null,
@@ -818,7 +820,7 @@ export default function LessonsPage() {
                   </div>
 
                   <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    {[['is_active', 'نشط ومرئي'], ['is_free', '🆓 مجاني']].map(([k, l]) => (
+                    {[['is_active', 'نشط ومرئي'], ['is_free', '🆓 مجاني'], ['is_free_preview', '👁️ معاينة مجانية (Udemy style)']].map(([k, l]) => (
                       <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                         <input type="checkbox" checked={(form as any)[k]} onChange={e => setForm((f: any) => ({ ...f, [k]: e.target.checked }))} style={{ width: 16, height: 16 }} />
                         <span style={{ color: '#e2e8f0', fontSize: 13 }}>{l}</span>

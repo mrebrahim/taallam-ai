@@ -43,30 +43,45 @@ export default function CourseDetailScreen() {
 
   const load = async () => {
     setLoading(true)
-    const { data: rm } = await supabase.from('roadmaps').select('*').eq('slug', slug).single()
+    
+    // Step 1: Get roadmap
+    const { data: rm, error: rmErr } = await supabase
+      .from('roadmaps').select('*').eq('slug', slug).single()
+    
+    if (rmErr || !rm) {
+      setLoading(false)
+      return
+    }
     setRoadmap(rm)
 
+    // Step 2: Get lessons using roadmap ID
+    const roadmapId = rm.id
+    const { data: ls } = await supabase
+      .from('lessons')
+      .select('id,title,title_ar,duration_seconds,sort_order,is_free_preview')
+      .eq('roadmap_id', roadmapId)
+      .eq('is_active', true)
+      .order('sort_order')
+    setLessons(ls || [])
+
+    // Step 3: Check enrollment
     let validEnrolled = false
     if (user) {
       const { data: enrollment } = await supabase
         .from('course_enrollments').select('id,expires_at')
-        .eq('user_id', user.id).eq('roadmap_id', rm?.id).eq('is_active', true).maybeSingle()
+        .eq('user_id', user.id).eq('roadmap_id', roadmapId).eq('is_active', true).maybeSingle()
       validEnrolled = enrollment
         ? (!enrollment.expires_at || new Date(enrollment.expires_at) > new Date()) : false
-    }
-    setEnrolled(validEnrolled)
+      setEnrolled(validEnrolled)
 
-    const { data: ls } = await supabase
-      .from('lessons').select('id,title,title_ar,duration_seconds,sort_order,is_free_preview')
-      .eq('roadmap_id', rm?.id).eq('is_active', true).order('sort_order')
-    setLessons(ls || [])
-
-    if (validEnrolled && user) {
-      const { data: lp } = await supabase
-        .from('user_lesson_progress').select('lesson_id')
-        .eq('user_id', user.id).eq('completed', true)
-      setCompleted(new Set(lp?.map((l: any) => l.lesson_id) || []))
+      if (validEnrolled) {
+        const { data: lp } = await supabase
+          .from('user_lesson_progress').select('lesson_id')
+          .eq('user_id', user.id).eq('completed', true)
+        setCompleted(new Set(lp?.map((l: any) => l.lesson_id) || []))
+      }
     }
+
     setLoading(false)
   }
 
